@@ -92,8 +92,10 @@ async function main() {
 
   const cards = await evalIn(shell, `document.querySelectorAll('.tool-card').length`)
   check('Bento 网格渲染 4 张内置工具卡', cards === 4, `cards=${cards}`)
-  const title = await evalIn(shell, `document.querySelector('.win-title')?.textContent?.trim()`)
-  check('面板标题正确', title?.includes('tool-tool不绝'), title)
+  const greet = await evalIn(shell, `document.querySelector('.hero-greet .hi')?.textContent?.trim()`)
+  check('问候语渲染（含渐变强调）', !!greet && greet.length > 0, greet)
+  const searchH = await evalIn(shell, `document.querySelector('.hero-search')?.offsetHeight`)
+  check('Raycast 式大搜索框渲染', searchH >= 40, `h=${searchH}`)
 
   console.log('■ 工具窗创建与聚焦')
   // 面板点击 → 创建工具窗

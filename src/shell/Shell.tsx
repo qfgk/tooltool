@@ -1,4 +1,4 @@
-// 工作台主面板：Bento 网格 + 搜索 + 命令面板（Ctrl+K）
+// 工作台主面板：问候 + Raycast 式搜索优先 + 3 列工具网格 + Ctrl+K 命令面板
 import { render } from 'solid-js/web'
 import { createSignal, For, Show, onMount, onCleanup } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
@@ -12,6 +12,21 @@ interface ToolEntry {
   command?: string
 }
 
+function greet(): string {
+  const h = new Date().getHours()
+  if (h < 5) return '夜深了'
+  if (h < 11) return '早上好'
+  if (h < 13) return '中午好'
+  if (h < 18) return '下午好'
+  return '晚上好'
+}
+
+function dateLine(): string {
+  const d = new Date()
+  const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][d.getDay()]
+  return `${d.getMonth() + 1}月${d.getDate()}日 ${week}`
+}
+
 export function mount(root: HTMLElement) {
   render(Dashboard, root)
 }
@@ -22,31 +37,31 @@ function Dashboard() {
   const [paletteOpen, setPaletteOpen] = createSignal(false)
   const [paletteIdx, setPaletteIdx] = createSignal(0)
 
+  let paletteInput: HTMLInputElement | undefined
+
   onMount(async () => {
     try {
-      const st = await invoke<{ tools: ToolEntry[] }>('get_state')
+      const st = await invoke<{ settings: Record<string, any>; tools: ToolEntry[] }>('get_state')
       setTools(st.tools || [])
       const theme = (st as any).settings?.theme
-      if (theme && theme !== 'auto') document.documentElement.dataset.theme = theme
+      if (theme === 'light') document.documentElement.dataset.theme = 'light'
     } catch { /* ignore */ }
 
-    // Ctrl+K 命令面板
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
-        setPaletteOpen(!paletteOpen())
+        const next = !paletteOpen()
+        setPaletteOpen(next)
         setPaletteIdx(0)
-        if (!paletteOpen()) setTimeout(() => paletteInput?.focus(), 30)
+        if (next) setTimeout(() => paletteInput?.focus(), 30)
       } else if (e.key === 'Escape') {
-        if (paletteOpen()) { setPaletteOpen(false); return }
-        getCurrentWindow().hide()
+        if (paletteOpen()) setPaletteOpen(false)
+        else getCurrentWindow().hide()
       }
     }
     window.addEventListener('keydown', onKey)
     onCleanup(() => window.removeEventListener('keydown', onKey))
   })
-
-  let paletteInput: HTMLInputElement | undefined
 
   const filter = (list: ToolMeta[]) => {
     const kw = q().trim().toLowerCase()
@@ -60,15 +75,14 @@ function Dashboard() {
         .filter((t) => t.kind === 'external')
         .map((t) => ({ id: t.id, name: t.name, icon: ICONS.pin, desc: t.command || '', kind: 'external' as const })),
     )
-  const paletteItems = () => [
-    ...HOSTED_TOOLS.map((t) => ({ id: t.id, name: t.name, icon: t.icon, kind: 'hosted' as const })),
-    ...tools()
-      .filter((t) => t.kind === 'external')
-      .map((t) => ({ id: t.id, name: t.name, icon: ICONS.pin, kind: 'external' as const })),
-  ]
   const paletteFiltered = () => {
     const kw = q().trim().toLowerCase()
-    const all = paletteItems()
+    const all = [
+      ...HOSTED_TOOLS.map((t) => ({ id: t.id, name: t.name, icon: t.icon, kind: 'hosted' as const })),
+      ...tools()
+        .filter((t) => t.kind === 'external')
+        .map((t) => ({ id: t.id, name: t.name, icon: ICONS.pin, kind: 'external' as const })),
+    ]
     if (!kw) return all
     return all.filter((t) => t.name.toLowerCase().includes(kw))
   }
@@ -78,8 +92,7 @@ function Dashboard() {
   }
 
   const runPalette = (idx: number) => {
-    const items = paletteFiltered()
-    const item = items[idx]
+    const item = paletteFiltered()[idx]
     if (!item) return
     setPaletteOpen(false)
     setQ('')
@@ -89,27 +102,43 @@ function Dashboard() {
 
   return (
     <div class="win">
-      {/* 顶栏：品牌 + 搜索 + 窗口控制 */}
-      <header class="win-head" data-tauri-drag-region>
-        <span class="win-title"><span class="dot" /> tool-tool不绝</span>
-        <span class="drag" data-tauri-drag-region />
-        <div class="searchbox" style={{ width: '220px' }}>
+      {/* 问候区 + Raycast 式大搜索 */}
+      <div class="hero">
+        <div class="hero-greet">
+          <span class="hi">
+            {greet()}，<em>开始专注</em>
+          </span>
+          <span style={{ display: 'inline-flex', 'align-items': 'center', gap: '10px' }}>
+            <span class="date">{dateLine()}</span>
+            <button
+              class="ib"
+              style={{ width: '26px', height: '26px', 'font-size': '13px' }}
+              title="关闭（隐藏到托盘）"
+              onClick={() => getCurrentWindow().hide()}
+              innerHTML={ICONS.close}
+            />
+          </span>
+        </div>
+        <div class="searchbox hero-search">
           <span class="s-ico" innerHTML={ICONS.search} />
           <input
-            placeholder="搜索工具…"
+            placeholder="搜索工具，回车启动第一个…"
             onInput={(e) => setQ(e.currentTarget.value)}
             onKeyDown={(e) => {
+              e.stopPropagation()
               if (e.key === 'Enter') {
                 const all = [...hosted(), ...external()]
                 if (all[0]) launch(all[0].id)
+              } else if (e.key === 'Escape') {
+                getCurrentWindow().hide()
               }
             }}
           />
+          <button class="ib" style={{ width: '24px', height: '24px', 'font-size': '11px' }} title="命令面板 (Ctrl+K)" onClick={() => { setPaletteOpen(true); setTimeout(() => paletteInput?.focus(), 30) }} innerHTML={ICONS.dots} />
         </div>
-        <button class="ib" title="关闭（隐藏到托盘）" onClick={() => getCurrentWindow().hide()} innerHTML={ICONS.close} />
-      </header>
+      </div>
 
-      {/* Bento 网格 */}
+      {/* 工具网格 */}
       <div class="bento">
         <For each={hosted()}>
           {(t) => (
@@ -132,6 +161,14 @@ function Dashboard() {
         <Show when={!hosted().length && !external().length}>
           <div class="bento-empty">没有匹配的工具</div>
         </Show>
+      </div>
+
+      {/* 底部提示 */}
+      <div class="foot-hint">
+        <span>
+          <kbd>Ctrl+Alt+T</kbd> 呼出 / 隐藏 · <kbd>Ctrl+K</kbd> 命令面板
+        </span>
+        <span>点击卡片启动工具</span>
       </div>
 
       {/* 命令面板 */}

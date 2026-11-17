@@ -14,6 +14,10 @@ const TOOL_IMPORTS: Record<string, () => Promise<{ mount: (root: HTMLElement) =>
 }
 
 async function boot() {
+  // 深色为默认主题（液态玻璃×Bento），浅色需在 settings 显式指定
+  try {
+    document.documentElement.dataset.theme ||= 'dark'
+  } catch { /* ignore */ }
   try {
     if (label === 'shell') {
       const mod = await import('./shell/Shell')
