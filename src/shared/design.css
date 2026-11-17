@@ -1,0 +1,254 @@
+/* ================================================================
+   tool-tool不绝 · 液态玻璃 × Bento 设计令牌与基础样式
+   层级：页面底 < 卡片底 < 悬浮底；模糊只给悬浮层
+   ================================================================ */
+
+:root {
+  --bg: #f4f5f9;
+  --surface: #ffffff;
+  --surface-2: #ffffff;
+  --surface-dim: #eceef4;
+
+  --text: #171a21;
+  --text-2: #4c5361;
+  --text-3: #8b93a5;
+
+  --line: #e7e9f0;
+  --line-strong: #d4d8e3;
+
+  --brand: #6e6af6;
+  --brand-2: #4d9cf5;
+  --grad-brand: linear-gradient(135deg, #6e6af6 0%, #4d9cf5 100%);
+  --brand-weak: rgba(110, 106, 246, 0.10);
+  --on-brand: #ffffff;
+
+  --ok: #2fa96c;
+  --warn: #e08700;
+  --danger: #e5484d;
+  --danger-weak: rgba(229, 72, 77, 0.12);
+  --star: #f5b301;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 22px;
+
+  --shadow-1: 0 1px 2px rgba(16, 20, 34, 0.05);
+  --shadow-2: 0 4px 14px rgba(16, 20, 34, 0.08);
+  --shadow-3: 0 12px 34px rgba(16, 20, 34, 0.16);
+  --ring: 0 0 0 3px var(--brand-weak);
+
+  --blur-pop: blur(18px) saturate(1.5);
+
+  --ease-out: cubic-bezier(0.22, 0.8, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.44, 1);
+  --t-fast: 120ms;
+  --t-med: 180ms;
+  --t-slow: 260ms;
+}
+
+[data-theme='dark'] {
+  --bg: #101218;
+  --surface: #191d26;
+  --surface-2: #1e232e;
+  --surface-dim: #141821;
+
+  --text: #eef0f5;
+  --text-2: #aab2c3;
+  --text-3: #67707f;
+
+  --line: #262c38;
+  --line-strong: #333a48;
+
+  --brand: #8a86ff;
+  --brand-2: #5db0ff;
+  --brand-weak: rgba(138, 134, 255, 0.14);
+  --on-brand: #ffffff;
+
+  --danger: #f2555a;
+  --danger-weak: rgba(242, 85, 90, 0.16);
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-2: 0 4px 14px rgba(0, 0, 0, 0.45);
+  --shadow-3: 0 12px 34px rgba(0, 0, 0, 0.55);
+}
+
+/* ================= 基础 ================= */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  font-family: system-ui, 'Segoe UI Variable', 'Segoe UI', 'Microsoft YaHei UI', sans-serif;
+  font-size: 13.5px;
+  color: var(--text);
+  background: transparent;
+  user-select: none;
+  overflow: hidden;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+button:focus-visible { outline: none; box-shadow: var(--ring); border-radius: var(--r-sm); }
+input, textarea { font: inherit; color: var(--text); }
+input:focus-visible, textarea:focus-visible { outline: none; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--line-strong); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-3); }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ================= 窗口与卡片 ================= */
+
+.win {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  position: relative;
+}
+
+.win-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 12px 0 16px;
+  user-select: none;
+}
+.win-head .drag { flex: 1; height: 100%; }
+
+.win-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 700;
+}
+.win-title .dot {
+  width: 10px; height: 10px;
+  border-radius: 3px;
+  background: var(--grad-brand);
+}
+
+.ib {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--text-2);
+  border-radius: var(--r-sm);
+  transition: all var(--t-fast) var(--ease-out);
+}
+.ib:hover { background: var(--surface-dim); color: var(--text); }
+.ib:active { transform: scale(0.94); }
+.ib.close:hover { background: var(--danger-weak); color: var(--danger); }
+
+/* Bento 卡片 */
+.card {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+  transition: transform var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
+}
+.card.hoverable:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-2);
+  border-color: var(--line-strong);
+}
+.card.hoverable:active { transform: translateY(0) scale(0.985); }
+
+/* 玻璃悬浮层 */
+.glass-pop {
+  background: color-mix(in srgb, var(--surface-2) 84%, transparent);
+  backdrop-filter: var(--blur-pop);
+  border: 1px solid color-mix(in srgb, var(--line-strong) 60%, transparent);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-3);
+}
+
+/* 搜索框 */
+.searchbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  background: var(--surface-dim);
+  transition: box-shadow var(--t-fast) ease, background var(--t-fast) ease;
+}
+.searchbox:focus-within {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--brand), var(--ring);
+}
+.searchbox input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-size: 12.5px;
+  user-select: text;
+}
+.searchbox input::placeholder { color: var(--text-3); }
+.searchbox .s-ico { color: var(--text-3); display: inline-flex; font-size: 14px; }
+
+/* 主/次/危险按钮 */
+.btn {
+  height: 30px;
+  padding: 0 14px;
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all var(--t-fast) var(--ease-out);
+}
+.btn.primary { background: var(--grad-brand); color: var(--on-brand); }
+.btn.primary:hover { filter: brightness(1.08); }
+.btn.primary:active { transform: scale(0.97); }
+.btn.ghost { background: var(--surface-dim); color: var(--text-2); }
+.btn.ghost:hover { color: var(--text); background: var(--line); }
+.btn.danger { background: var(--danger); color: #fff; }
+.btn.danger:hover { filter: brightness(1.08); }
+
+/* 工具页通用占位 */
+.tool-page {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0 16px 16px;
+  min-height: 0;
+}
+.tool-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--text-3);
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--r-lg);
+}
+.tool-placeholder .big-ico { font-size: 34px; color: var(--brand); opacity: 0.75; }
+.tool-placeholder .t1 { font-size: 14px; font-weight: 600; color: var(--text-2); }
+.tool-placeholder .t2 { font-size: 12px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 80ms !important; animation-duration: 80ms !important; }
+}

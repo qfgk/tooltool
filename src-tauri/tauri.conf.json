@@ -1,0 +1,43 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "tool-tool不绝",
+  "mainBinaryName": "tooltool",
+  "version": "0.1.0",
+  "identifier": "com.tooltool.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1421",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "shell",
+        "title": "tool-tool不绝",
+        "width": 760,
+        "height": 540,
+        "minWidth": 640,
+        "minHeight": 420,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": false,
+        "skipTaskbar": false,
+        "visible": false,
+        "shadow": false,
+        "resizable": true,
+        "focus": true,
+        "additionalBrowserArgs": "--disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows --disable-features=CalculateNativeWinOcclusion"
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [],
+    "icon": ["icons/icon.ico", "icons/icon.png"]
+  }
+}
