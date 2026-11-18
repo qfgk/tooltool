@@ -12,12 +12,12 @@ export function mount(root: HTMLElement) {
 type TabId = 'timestamp' | 'encode' | 'hash' | 'text' | 'convert' | 'color'
 
 const TABS: { id: TabId; name: string; icon: string }[] = [
-  { id: 'timestamp', name: '时间戳', icon: '⏱' },
-  { id: 'encode', name: '编码', icon: '🔐' },
-  { id: 'hash', name: '哈希', icon: '#️⃣' },
-  { id: 'text', name: '文本', icon: '✏️' },
-  { id: 'convert', name: '换算', icon: '🔄' },
-  { id: 'color', name: '取色', icon: '🎨' },
+  { id: 'timestamp', name: '时间戳', icon: ICONS.clock },
+  { id: 'encode', name: '编码', icon: ICONS.shield },
+  { id: 'hash', name: '哈希', icon: ICONS.hash },
+  { id: 'text', name: '文本', icon: ICONS.type },
+  { id: 'convert', name: '换算', icon: ICONS.shuffle },
+  { id: 'color', name: '取色', icon: ICONS.pipette },
 ]
 
 /* ---------------- 通用小组件 ---------------- */
@@ -405,6 +405,15 @@ function ColorTool() {
 
 /* ---------------- 主组件 ---------------- */
 
+const TAB_ICONS: Record<TabId, string> = {
+  timestamp: ICONS.clock,
+  encode: ICONS.shield,
+  hash: ICONS.hash,
+  text: ICONS.type,
+  convert: ICONS.shuffle,
+  color: ICONS.pipette,
+}
+
 function Toolbox() {
   const win = getCurrentWindow()
   const [tab, setTab] = createSignal<TabId>('timestamp')
@@ -417,25 +426,28 @@ function Toolbox() {
         <button class="ib close" title="关闭 (Esc)" onClick={() => win.close()} innerHTML={ICONS.close} />
       </header>
 
-      {/* 分类锚栏 */}
+      {/* 胶囊分段导航（渐变选中） */}
       <div class="tb-tabs">
         <For each={TABS}>
           {(t) => (
             <button class="tb-tab" classList={{ on: tab() === t.id }} onClick={() => setTab(t.id)}>
-              <span style={{ 'margin-right': '5px' }}>{t.icon}</span>
+              <span class="tb-tab-ico" innerHTML={TAB_ICONS[t.id]} />
               {t.name}
             </button>
           )}
         </For>
       </div>
 
+      {/* 内容区（切换淡入） */}
       <div class="tool-page" style={{ overflow: 'auto' }}>
-        <Show when={tab() === 'timestamp'}><TimestampTool /></Show>
-        <Show when={tab() === 'encode'}><EncodeTool /></Show>
-        <Show when={tab() === 'hash'}><HashTool /></Show>
-        <Show when={tab() === 'text'}><TextTool /></Show>
-        <Show when={tab() === 'convert'}><ConvertTool /></Show>
-        <Show when={tab() === 'color'}><ColorTool /></Show>
+        <div class="tb-pane" data-tab={tab()}>
+          <Show when={tab() === 'timestamp'}><TimestampTool /></Show>
+          <Show when={tab() === 'encode'}><EncodeTool /></Show>
+          <Show when={tab() === 'hash'}><HashTool /></Show>
+          <Show when={tab() === 'text'}><TextTool /></Show>
+          <Show when={tab() === 'convert'}><ConvertTool /></Show>
+          <Show when={tab() === 'color'}><ColorTool /></Show>
+        </div>
       </div>
     </div>
   )

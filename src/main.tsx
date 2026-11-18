@@ -33,11 +33,25 @@ async function boot() {
   // 空白处拖动：mousedown 目标不是可交互元素时启动窗口拖拽
   const dragHit = (t: EventTarget | null): boolean => {
     if (!(t instanceof Element)) return false
-    return !t.closest('button, input, textarea, select, label, .card, .glass-pop, .ql-grid, .tb-block, .palette, a')
+    return !t.closest('button, input, textarea, select, label, .card, .glass-pop, .ql-grid, .tb-block, .palette, a, .scan-list')
   }
   window.addEventListener('mousedown', (e) => {
     if (e.button !== 0) return
     if (dragHit(e.target)) void win.startDragging().catch(() => {})
+  })
+
+  // 卡片点击涟漪（合成层动画，无重排开销）
+  document.addEventListener('click', (e) => {
+    const t = e.target as Element | null
+    const card = t?.closest('.card')
+    if (!card) return
+    const rect = card.getBoundingClientRect()
+    const r = document.createElement('span')
+    r.className = 'ripple'
+    r.style.left = `${e.clientX - rect.left}px`
+    r.style.top = `${e.clientY - rect.top}px`
+    card.appendChild(r)
+    setTimeout(() => r.remove(), 520)
   })
 
   try {
@@ -62,9 +76,10 @@ async function boot() {
     renderUnknown(String(e))
   }
 
-  // 渲染完成后再显示窗口，避免白屏闪烁
+  // 渲染完成后再显示窗口，避免白屏闪烁；body.ready 触发进入动画
   requestAnimationFrame(() => {
     requestAnimationFrame(async () => {
+      document.body.classList.add('ready')
       try {
         await win.show()
         await win.setFocus()

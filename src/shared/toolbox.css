@@ -14,14 +14,28 @@
   color: var(--text-2);
   font-size: 12px;
   border: 1px solid var(--line);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   transition: all var(--t-fast) ease;
 }
 .tb-tab:hover { color: var(--text); }
 .tb-tab.on {
-  background: var(--brand-weak);
-  color: var(--brand);
-  border-color: var(--brand);
+  background: var(--grad-brand);
+  color: var(--on-brand);
+  border-color: transparent;
   font-weight: 600;
+  box-shadow: 0 3px 10px var(--brand-glow);
+}
+.tb-tab-ico { display: inline-flex; font-size: 13px; opacity: 0.9; }
+
+/* 内容切换淡入 */
+.tb-pane {
+  animation: tb-pane-in 180ms var(--ease-out);
+}
+@keyframes tb-pane-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .tb-block { display: flex; flex-direction: column; gap: 8px; }

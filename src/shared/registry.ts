@@ -25,6 +25,12 @@ export const ICONS = {
   chevron: svg('<path d="M6 9l6 6 6-6"/>'),
   hammer: svg('<path d="M15 12l-8.5 8.5a2.12 2.12 0 01-3-3L12 9"/><path d="M17.64 15L22 10.64"/>'),
   clock: svg('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'),
+  shield: svg('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'),
+  hash: svg('<path d="M4 9h16M4 15h16M10 3L8 21M16 3l-2 18"/>'),
+  type: svg('<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/>'),
+  shuffle: svg('<polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/>'),
+  pipette: svg('<path d="M12 2v4"/><path d="M8 6h8"/><path d="M16.5 6l-8.7 8.7a1 1 0 00-.3.7V19a2 2 0 002 2h3.4a1 1 0 00.7-.3l8.7-8.7"/>'),
+  pause: svg('<path d="M9 5v14M15 5v14"/>'),
 }
 
 export const HOSTED_TOOLS: ToolMeta[] = [

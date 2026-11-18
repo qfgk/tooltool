@@ -119,8 +119,8 @@ input:focus-visible, textarea:focus-visible { outline: none; }
   overflow: hidden;
   position: relative;
 }
-/* 背景光斑：右上紫 / 左下蓝，营造空间纵深（不拦截交互） */
-.win::before {
+/* 背景光斑：仅主页（shell）有，工具窗用纯色底+顶条区分层级 */
+body:not([data-window='tool']) .win::before {
   content: '';
   position: absolute;
   inset: 0;
@@ -130,6 +130,37 @@ input:focus-visible, textarea:focus-visible { outline: none; }
   pointer-events: none;
 }
 .win > * { position: relative; }
+
+/* 工具窗（弹窗）：渐变顶条 + 更强投影，与主页明确区分 */
+body[data-window='tool'] .win {
+  border: 1px solid var(--line-strong);
+  box-shadow: var(--shadow-3), 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+body[data-window='tool'] .win::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--grad-brand);
+  z-index: 10;
+}
+
+/* 窗口进入动画（show 之后触发，GPU 合成无重排） */
+.win {
+  opacity: 0;
+  transform: scale(0.985);
+}
+body.ready .win {
+  opacity: 1;
+  transform: scale(1);
+  animation: win-in 200ms var(--ease-out);
+}
+@keyframes win-in {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
 
 .win-head {
   flex: none;
@@ -281,6 +312,24 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 .tool-placeholder .big-ico { font-size: 34px; color: var(--brand); opacity: 0.75; }
 .tool-placeholder .t1 { font-size: 14px; font-weight: 600; color: var(--text-2); }
 .tool-placeholder .t2 { font-size: 12px; }
+
+/* 卡片点击涟漪（JS 注入 span，transform/opacity 合成动画） */
+.card .ripple {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--brand-weak);
+  transform: translate(-50%, -50%) scale(1);
+  animation: ripple-out 480ms var(--ease-out) forwards;
+  pointer-events: none;
+}
+@keyframes ripple-out {
+  to { transform: translate(-50%, -50%) scale(16); opacity: 0; }
+}
+
+/* 窗口未 ready 时隐藏（防白屏闪烁），ready 后进入动画 */
+body:not(.ready) .win { visibility: hidden; }
 
 @media (prefers-reduced-motion: reduce) {
   * { transition-duration: 80ms !important; animation-duration: 80ms !important; }
