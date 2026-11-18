@@ -113,7 +113,7 @@ pub fn load_shared() -> AppShared {
     AppShared { tools: std::sync::Mutex::new(read_tools_file()), settings: std::sync::Mutex::new(settings) }
 }
 
-/// 全量清单 = 内置工具（可被 tools.json 中同 id hosted 项覆盖热键等）+ 外部工具
+/// 全量清单 = 内置工具（外部启动项已统一迁移至 launcher.json，由 quicklaunch 模块管理）
 pub fn all_tools(shared: &AppShared) -> Vec<ToolEntry> {
     let custom = shared.tools.lock().unwrap().clone();
     let mut out: Vec<ToolEntry> = Vec::new();
@@ -129,9 +129,6 @@ pub fn all_tools(shared: &AppShared) -> Vec<ToolEntry> {
                 ..Default::default()
             },
         });
-    }
-    for t in custom.into_iter().filter(|t| t.kind == "external") {
-        out.push(t);
     }
     out
 }
@@ -169,56 +166,14 @@ pub fn remove_tool(state: State<'_, AppShared>, id: String) -> Result<(), String
     Ok(())
 }
 
-#[tauri::command]
-pub fn add_external_tool(
-    state: State<'_, AppShared>,
-    name: String,
-    command: String,
-) -> Result<ToolEntry, String> {
-    if name.trim().is_empty() || command.trim().is_empty() {
-        return Err("名称与目标不能为空".into());
-    }
-    let entry = ToolEntry {
-        id: format!("ext-{}", data::new_id()),
-        name: name.trim().into(),
-        kind: "external".into(),
-        command: Some(command.trim().into()),
-        window: ToolWin::default(),
-        enabled: true,
-        ..Default::default()
-    };
-    let mut tools = state.tools.lock().unwrap();
-    tools.push(entry.clone());
-    write_tools_file(&tools)?;
-    Ok(entry)
-}
-
-/// 前端启动上下文：窗口 label 与 --tool 参数解析出的模式
-#[tauri::command]
-pub fn startup_context(window: tauri::Window) -> StartupContext {
-    let label = window.label().to_string();
-    let mode = if label == "shell" { "shell" } else { "tool" };
-    StartupContext {
-        mode: mode.into(),
-        tool_id: if mode == "tool" { label.strip_prefix("tool-").unwrap_or("").to_string() } else { String::new() },
-    }
-}
-
-#[derive(Debug, serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StartupContext {
-    pub mode: String,
-    pub tool_id: String,
-}
-
-/// 全量状态：设置 + 工具清单（含内置+外部）
+/// 全量状态：设置 + 内置工具清单（启动项统一由 quicklaunch 管理）
 #[tauri::command]
 pub fn get_state(state: State<'_, AppShared>) -> serde_json::Value {
     let settings = state.settings.lock().unwrap().clone();
     serde_json::json!({ "settings": settings, "tools": all_tools(&state) })
 }
 
-/// 统一启动入口：hosted → 创建/聚焦工具窗；external → 系统打开器。
+/// 统一启动入口：hosted → 创建/聚焦工具窗。
 /// 注意：hosted 分支必须在独立线程创建窗口——Tauri 已知问题
 /// （同步 command 内直接 build 动态窗口会死锁并停留在 about:blank，
 ///  见 tauri#13092 / #13963），async command + async_runtime::spawn 可规避。
@@ -236,16 +191,6 @@ pub async fn launch_tool(app: tauri::AppHandle, state: State<'_, AppShared>, id:
                 let _ = create_or_focus_tool::<tauri::Wry>(&app, &id);
             });
             Ok(())
-        }
-        "external" => {
-            let cmd = entry.command.clone().unwrap_or_default();
-            use tauri_plugin_opener::OpenerExt;
-            let opener = app.opener();
-            if cmd.starts_with("http://") || cmd.starts_with("https://") {
-                opener.open_url(cmd, None::<&str>).map_err(|e| e.to_string())
-            } else {
-                opener.open_path(cmd, None::<&str>).map_err(|e| e.to_string())
-            }
         }
         other => Err(format!("未知工具类型：{other}")),
     }

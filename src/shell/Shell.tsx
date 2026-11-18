@@ -1,6 +1,6 @@
 // 工作台主面板（仪表盘）：Bento 三级卡片 + 实时徽标 + 内联搜索 + Ctrl+K 命令面板
 import { render } from 'solid-js/web'
-import { createSignal, createMemo, For, Show, onMount, onCleanup } from 'solid-js'
+import { createSignal, For, Show, onMount, onCleanup } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { HOSTED_TOOLS, ICONS, type ToolMeta } from '../shared/registry'
@@ -59,16 +59,13 @@ function Dashboard() {
   const [searchFocus, setSearchFocus] = createSignal(false)
   const [paletteOpen, setPaletteOpen] = createSignal(false)
   const [paletteIdx, setPaletteIdx] = createSignal(0)
-  const [addOpen, setAddOpen] = createSignal(false)
-  const [addForm, setAddForm] = createSignal({ name: '', command: '' })
-  const [addErr, setAddErr] = createSignal('')
+  // 主题：auto-time（随时间）| dark | light
   const [themeMode, setThemeMode] = createSignal<ThemeMode>('auto-time')
   const [badges, setBadges] = createSignal<Record<string, string>>({})
+  // 启动项（快速启动器数据，面板直接展示执行）
+  const [qlEntries, setQlEntries] = createSignal<{ id: string; name: string; kind: string; target: string }[]>([])
 
   let paletteInput: HTMLInputElement | undefined
-  let searchInput: HTMLInputElement | undefined
-
-  const PIN_TODO_EXE = 'D:\\ai\\todo\\src-tauri\\target\\release\\todo.exe'
 
   const refreshTools = async () => {
     try {
@@ -77,6 +74,7 @@ function Dashboard() {
       const mode = (st.settings?.theme as ThemeMode) || 'auto-time'
       setThemeMode(mode)
       applyTheme(mode)
+      try { setQlEntries(await invoke('ql_list')) } catch { /* ignore */ }
     } catch { /* ignore */ }
   }
 
@@ -113,10 +111,8 @@ function Dashboard() {
         setPaletteIdx(0)
         if (next) setTimeout(() => paletteInput?.focus(), 30)
       } else if (e.key === 'Escape') {
-        if (paletteOpen() || addOpen()) {
-          setPaletteOpen(false)
-          setAddOpen(false)
-        } else win.hide()
+        if (paletteOpen()) setPaletteOpen(false)
+        else win.hide()
       }
     }
     window.addEventListener('keydown', onKey)
@@ -133,28 +129,7 @@ function Dashboard() {
   const themeIcon = () => (themeMode() === 'dark' ? '🌙' : themeMode() === 'light' ? '☀️' : '🕐')
   const themeLabel = () => (themeMode() === 'dark' ? '深色' : themeMode() === 'light' ? '浅色' : '随时间')
 
-  const addExternal = async () => {
-    setAddErr('')
-    try {
-      await invoke('add_external_tool', { name: addForm().name, command: addForm().command })
-      setAddOpen(false)
-      setAddForm({ name: '', command: '' })
-      await refreshTools()
-    } catch (e) { setAddErr(String(e)) }
-  }
-
-  const removeExternal = async (id: string) => {
-    try {
-      await invoke('remove_tool', { id })
-      await refreshTools()
-    } catch (e) { console.error(e) }
-  }
-
-  const quickAddPinTodo = () => {
-    setAddOpen(true)
-    setAddErr('')
-    setAddForm({ name: 'PinTodo 待办', command: PIN_TODO_EXE })
-  }
+  const qlIco = (k: string) => (k === 'url' ? ICONS.search : k === 'dir' ? '📁' : '🚀')
 
   const filter = (list: ToolMeta[]) => {
     const kw = q().trim().toLowerCase()
@@ -192,19 +167,10 @@ function Dashboard() {
   }
 
   const searchEnter = () => {
-    const raw = searchInput?.value.trim() ?? ''
     // 粘贴的是网址 → 直接打开；否则启动第一个匹配工具
-    if (/^https?:\/\//.test(raw)) {
-      invoke('open_url', { url: raw }).catch(() => {})
-      return
-    }
     const all = [...hosted(), ...external()]
     if (all[0]) launch(all[0].id)
   }
-
-  // hero 卡片默认 PinTodo（hosted 第一个可显示徽标的；固定为 PinTodo 语义）
-  const heroCard = createMemo(() => HOSTED_TOOLS.find((t) => t.id === 'notes') ?? HOSTED_TOOLS[0])
-  void heroCard
 
   return (
     <div class="win">
@@ -234,7 +200,13 @@ function Dashboard() {
         >
           {themeIcon()}
         </button>
-        <button class="ib" style={{ width: '28px', height: '28px' }} title="添加外部工具" onClick={() => { setAddOpen(true); setAddErr(''); setAddForm({ name: '', command: '' }) }} innerHTML={ICONS.plus} />
+        <button
+          class="ib"
+          style={{ width: '28px', height: '28px' }}
+          title="添加启动项（打开快速启动管理）"
+          onClick={() => launch('launcher')}
+          innerHTML={ICONS.plus}
+        />
         <button
           class="ib close"
           style={{ width: '28px', height: '28px' }}
@@ -255,7 +227,7 @@ function Dashboard() {
       {/* Bento 仪表盘：hero 2×2 + wide 2×1 + std 1×1 */}
       <div class="bento">
         {/* Hero 2×2：笔记（默认主卡） */}
-        <For each={hosted().filter((t) => t.id === heroId())}>
+        <For each={hosted().filter((t) => t.id === 'notes')}>
           {(t) => (
             <button class="card hoverable tool-card hero" onClick={() => launch(t.id)} title={t.desc}>
               <Show when={badges()[t.id]}><span class="card-badge">{badges()[t.id]}</span></Show>
@@ -284,7 +256,7 @@ function Dashboard() {
         </For>
 
         {/* Std 1×1：快速启动 / 工具箱 / 外部 / 添加 */}
-        <For each={hosted().filter((t) => t.id !== heroId() && t.id !== 'clipboard')}>
+        <For each={hosted().filter((t) => t.id !== 'notes' && t.id !== 'clipboard')}>
           {(t) => (
             <button class="card hoverable tool-card std" onClick={() => launch(t.id)} title={t.desc}>
               <Show when={badges()[t.id]}><span class="card-badge">{badges()[t.id]}</span></Show>
@@ -294,22 +266,26 @@ function Dashboard() {
             </button>
           )}
         </For>
-        <For each={external()}>
-          {(t) => (
-            <button class="card hoverable tool-card std ext" onClick={() => launch(t.id)} title={t.desc}>
-              <span class="ext-del" title="移除此工具" onClick={(ev) => { ev.stopPropagation(); removeExternal(t.id) }} innerHTML={ICONS.close} />
-              <span class="tool-ico ext" innerHTML={t.icon} />
-              <span class="tool-name">{t.name}</span>
-              <span class="tool-desc">{t.desc}</span>
+        {/* 启动项卡（来自快速启动器数据，点击直接执行） */}
+        <For each={qlEntries()}>
+          {(e) => (
+            <button
+              class="card hoverable tool-card std ql"
+              onClick={() => invoke('ql_run', { id: e.id }).catch((err) => console.error(err))}
+              title={e.target}
+            >
+              <span class="tool-ico ql" innerHTML={qlIco(e.kind)} />
+              <span class="tool-name">{e.name}</span>
+              <span class="tool-desc">{e.target}</span>
             </button>
           )}
         </For>
-        {/* 添加外部工具卡片 */}
+        {/* 添加卡：打开快速启动器管理 */}
         <Show when={!q().trim()}>
-          <button class="card hoverable tool-card std add-card" onClick={() => { setAddOpen(true); setAddErr(''); setAddForm({ name: '', command: '' }) }}>
+          <button class="card hoverable tool-card std add-card" onClick={() => launch('launcher')} title="添加应用 / 文件夹 / 网址，支持扫描文件夹批量导入">
             <span class="tool-ico add" innerHTML={ICONS.plus} />
-            <span class="tool-name">添加工具</span>
-            <span class="tool-desc">exe / 脚本 / 任意程序</span>
+            <span class="tool-name">添加启动项</span>
+            <span class="tool-desc">应用 / 文件夹 / 网址</span>
           </button>
         </Show>
         <Show when={!hosted().length && !external().length}>
@@ -321,31 +297,10 @@ function Dashboard() {
       <div class="foot-hint">
         <span><kbd>Ctrl+Alt+T</kbd> 呼出 · <kbd>Ctrl+K</kbd> 面板</span>
         <span style={{ display: 'inline-flex', 'align-items': 'center', gap: '8px' }}>
-          <button class="quick-pin" onClick={quickAddPinTodo}>⚡ 注册 PinTodo</button>
           <span>主题：{themeLabel()}</span>
           <span>v0.1.0</span>
         </span>
       </div>
-
-      {/* 添加外部工具表单 */}
-      <Show when={addOpen()}>
-        <div class="palette-mask" onClick={(e) => { if (e.target === e.currentTarget) setAddOpen(false) }}>
-          <div class="glass-pop add-card-pop">
-            <div class="add-title">添加外部工具</div>
-            <label class="add-label">名称</label>
-            <input class="add-input" placeholder="例如：PinTodo 待办" value={addForm().name} onInput={(e) => setAddForm({ ...addForm(), name: e.currentTarget.value })} />
-            <label class="add-label">目标（exe / lnk / 脚本路径）</label>
-            <input class="add-input" placeholder="D:\\app\\tool.exe" value={addForm().command} onInput={(e) => setAddForm({ ...addForm(), command: e.currentTarget.value })} />
-            <Show when={addErr()}>
-              <div class="add-err">{addErr()}</div>
-            </Show>
-            <div class="add-acts">
-              <button class="btn ghost" onClick={() => setAddOpen(false)}>取消</button>
-              <button class="btn primary" onClick={addExternal}>添加</button>
-            </div>
-          </div>
-        </div>
-      </Show>
 
       {/* 命令面板 */}
       <Show when={paletteOpen()}>
@@ -394,5 +349,3 @@ function Dashboard() {
   )
 }
 
-// hero 主卡 id（当前固定为笔记；后续可在设置里切换）
-const heroId = () => 'notes'

@@ -1,5 +1,4 @@
 // tray.rs：系统托盘（各工具直达 + 打开面板 + 退出）
-use crate::{create_or_focus_tool, focus_shell};
 use tauri::menu::{MenuBuilder, MenuItemBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Manager, Runtime};
@@ -46,7 +45,7 @@ pub fn setup_tray<R: Runtime>(app: &tauri::AppHandle<R>) -> tauri::Result<()> {
                     .strip_prefix("tool-")
                     .or_else(|| other.strip_prefix("ext-"))
                     .unwrap_or(other);
-                crate::create_or_focus_tool(app, id);
+                let _ = crate::create_or_focus_tool(app, id);
             }
         })
         .on_tray_icon_event(|tray, event| {

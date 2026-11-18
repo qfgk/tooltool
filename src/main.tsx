@@ -8,7 +8,7 @@ const root = document.getElementById('app')!
 
 const TOOL_IMPORTS: Record<string, () => Promise<{ mount: (root: HTMLElement) => void }>> = {
   clipboard: () => import('./tools/clipboard/ClipboardTool'),
-  launcher: () => Promise.all([import('./tools/launcher/QuickLaunchTool'), import('./shared/tool-page.css')]).then(([m]) => m),
+  launcher: () => Promise.all([import('./tools/launcher/QuickLaunchTool'), import('./tools/launcher/launcher.css'), import('./shared/tool-page.css')]).then(([m]) => m),
   toolbox: () => Promise.all([import('./tools/toolbox/ToolboxTool'), import('./shared/toolbox.css')]).then(([m]) => m),
   notes: () => import('./tools/notes/NotesTool'),
 }

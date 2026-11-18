@@ -91,9 +91,10 @@ async function main() {
   check('面板冷启动 ≤3s（进程起→前端 booted）', bootMs <= 3000, `${bootMs}ms`)
 
   const cards = await evalIn(shell, `document.querySelectorAll('.tool-card').length`)
-  const extCards = await evalIn(shell, `[...document.querySelectorAll('.tool-card')].filter(c => c.querySelector('.tool-ico.ext')).length`)
+  // 4 内置（笔记 hero + 剪贴板 wide + 快启 std + 工具箱 std）+ 启动项卡（launcher.json，此前 PinTodo 已迁移 1 条）+ 添加卡
+  const qlCards = await evalIn(shell, `document.querySelectorAll('.tool-card.ql').length`)
   const addCards = await evalIn(shell, `document.querySelectorAll('.tool-card.add-card').length`)
-  check('Bento 网格渲染工具卡（4 内置 + 外部 + 添加卡）', cards === 4 + extCards + addCards, `cards=${cards} ext=${extCards} add=${addCards}`)
+  check('Bento 网格渲染工具卡（内置+启动项+添加卡）', cards === 4 + qlCards + addCards, `cards=${cards} ql=${qlCards} add=${addCards}`)
   const greet = await evalIn(shell, `document.querySelector('.hero-greet .hi')?.textContent?.trim()`)
   check('问候语渲染（含渐变强调）', !!greet && greet.length > 0, greet)
   const searchH = await evalIn(shell, `document.querySelector('.head-search')?.offsetHeight`)

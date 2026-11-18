@@ -4,7 +4,6 @@ mod quicklaunch;
 mod registry;
 mod tray;
 
-use registry::AppShared;
 use tauri::webview::WebviewWindowBuilder;
 use tauri::{Emitter, Manager, Runtime, WebviewUrl};
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
@@ -104,6 +103,7 @@ pub fn run() {
         .manage(registry::load_shared())
         .setup(|app| {
             data::backup_on_boot();
+            quicklaunch::migrate_from_tools();
 
             // 托盘
             tray::setup_tray(app.handle())?;
@@ -126,7 +126,6 @@ pub fn run() {
             registry::list_tools,
             registry::save_tool,
             registry::remove_tool,
-            registry::add_external_tool,
             registry::get_state,
             registry::launch_tool,
             registry::save_settings,
@@ -135,6 +134,8 @@ pub fn run() {
             quicklaunch::ql_save,
             quicklaunch::ql_delete,
             quicklaunch::ql_run,
+            quicklaunch::scan_folder,
+            quicklaunch::ql_add_batch,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tooltool");

@@ -3,8 +3,6 @@ use std::fs;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{Duration, Instant};
-use tauri::Manager;
 
 static ID_SEQ: AtomicU64 = AtomicU64::new(1);
 
@@ -46,35 +44,6 @@ pub fn write_atomic(path: &std::path::Path, content: &str) -> std::io::Result<()
 }
 
 /// 防抖持久化队列（与 PinTodo 相同模式）
-pub enum SaveReq {
-    Json { path: PathBuf, content: String },
-}
-
-pub struct AppState {
-    pub tx: std::sync::mpsc::Sender<SaveReq>,
-    pub settings: std::sync::Mutex<serde_json::Value>,
-}
-
-pub fn spawn_save_loop(app: tauri::AppHandle, rx: std::sync::mpsc::Receiver<SaveReq>) {
-    std::thread::spawn(move || {
-        let mut dirty = false;
-        let mut last = Instant::now();
-        for req in rx {
-            match req {
-                SaveReq::Json { path, content } => {
-                    let _ = write_atomic(&path, &content);
-                    dirty = true;
-                    last = Instant::now();
-                }
-            }
-            let _ = &app;
-            // 150ms 防抖窗口结束后落盘由 write_atomic 即时完成（写 tmp + rename 已原子）
-            let _ = (dirty, last);
-            std::thread::sleep(Duration::from_millis(10));
-        }
-    });
-}
-
 /// 启动备份：把关键 json 滚动备份到 backup/，保留最近 7 份
 pub fn backup_on_boot() {
     let dir = data_dir().join("backup");
