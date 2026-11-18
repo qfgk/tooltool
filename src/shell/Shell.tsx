@@ -58,8 +58,16 @@ function Dashboard() {
   // 主题：auto-time（随时间）| dark | light
   const [themeMode, setThemeMode] = createSignal<ThemeMode>('auto-time')
   const [badges, setBadges] = createSignal<Record<string, string>>({})
-  // 启动项（快速启动器数据，面板直接展示执行）
+  // 启动项（快速启动器数据，面板直接展示执行）。
+  // For 必须以字符串 id 作键：ql_list 每次返回全新对象引用，
+  // 若按对象引用键控会导致 DOM 重建、入场动画重放（"卡片动一下"）
   const [qlEntries, setQlEntries] = createSignal<{ id: string; name: string; kind: string; target: string }[]>([])
+  const qlById = () => {
+    const m = new Map<string, { id: string; name: string; kind: string; target: string }>()
+    for (const e of qlEntries()) m.set(e.id, e)
+    return m
+  }
+  const qlIds = () => qlEntries().map((e) => e.id)
 
   let paletteInput: HTMLInputElement | undefined
 
@@ -262,19 +270,22 @@ function Dashboard() {
             </button>
           )}
         </For>
-        {/* 启动项卡（来自快速启动器数据，点击直接执行） */}
-        <For each={qlEntries()}>
-          {(e) => (
-            <button
-              class="card hoverable tool-card std ql"
-              onClick={() => invoke('ql_run', { id: e.id }).catch((err) => console.error(err))}
-              title={e.target}
-            >
-              <span class="tool-ico ql" innerHTML={qlIco(e.kind)} />
-              <span class="tool-name">{e.name}</span>
-              <span class="tool-desc">{e.target}</span>
-            </button>
-          )}
+        {/* 启动项卡（来自快速启动器数据，点击直接执行；按 id 键控防重建） */}
+        <For each={qlIds()}>
+          {(id) => {
+            const e = () => qlById().get(id)!
+            return (
+              <button
+                class="card hoverable tool-card std ql"
+                onClick={() => invoke('ql_run', { id }).catch((err) => console.error(err))}
+                title={e().target}
+              >
+                <span class="tool-ico ql" innerHTML={qlIco(e().kind)} />
+                <span class="tool-name">{e().name}</span>
+                <span class="tool-desc">{e().target}</span>
+              </button>
+            )
+          }}
         </For>
         {/* 添加卡：打开快速启动器管理 */}
         <Show when={!q().trim()}>
