@@ -1,0 +1,115 @@
+/* 工具页通用样式（所有工具窗共用） */
+.tool-head-actions { display: flex; align-items: center; gap: 4px; }
+
+/* 快速启动器 */
+.ql-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
+  align-content: start;
+}
+.ql-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  cursor: pointer;
+  min-height: 96px;
+}
+.ql-ico { font-size: 22px; line-height: 1.2; }
+.ql-name { font-size: 12.5px; font-weight: 650; color: var(--text); }
+.ql-target {
+  font-size: 10.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.ql-acts {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity var(--t-fast) ease;
+}
+.ql-card:hover .ql-acts { opacity: 1; }
+.ql-acts .ib { width: 22px; height: 22px; font-size: 11px; }
+.ql-busy {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--surface-dim);
+  opacity: 0.5;
+}
+
+/* 表单 */
+.ql-form {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+}
+.ql-form-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.ql-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin: 10px 0 5px;
+}
+.ql-input {
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface-dim);
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  user-select: text;
+  transition: border-color var(--t-fast) ease, box-shadow var(--t-fast) ease;
+}
+.ql-input:focus {
+  border-color: transparent;
+  box-shadow: var(--ring);
+  background: var(--surface);
+}
+.ql-kinds { display: flex; gap: 6px; }
+.ql-kind {
+  height: 30px;
+  padding: 0 12px;
+  border-radius: var(--r-sm);
+  background: var(--surface-dim);
+  color: var(--text-2);
+  font-size: 12px;
+  border: 1px solid var(--line);
+  transition: all var(--t-fast) ease;
+}
+.ql-kind:hover { color: var(--text); }
+.ql-kind.on {
+  background: var(--brand-weak);
+  color: var(--brand);
+  border-color: var(--brand);
+  font-weight: 600;
+}
+.ql-err {
+  margin-top: 10px;
+  font-size: 11.5px;
+  color: var(--danger);
+  background: var(--danger-weak);
+  border-radius: var(--r-sm);
+  padding: 6px 10px;
+}
+.ql-form-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}

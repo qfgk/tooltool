@@ -1,5 +1,6 @@
 // lib.rs：入口分发（shell 面板 / --tool=<id> 工具窗）+ 托盘 + 热键 + 单实例聚焦
 mod data;
+mod quicklaunch;
 mod registry;
 mod tray;
 
@@ -129,6 +130,10 @@ pub fn run() {
             registry::get_state,
             registry::launch_tool,
             registry::quit_app,
+            quicklaunch::ql_list,
+            quicklaunch::ql_save,
+            quicklaunch::ql_delete,
+            quicklaunch::ql_run,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tooltool");

@@ -8,7 +8,7 @@ const root = document.getElementById('app')!
 
 const TOOL_IMPORTS: Record<string, () => Promise<{ mount: (root: HTMLElement) => void }>> = {
   clipboard: () => import('./tools/clipboard/ClipboardTool'),
-  launcher: () => import('./tools/launcher/QuickLaunchTool'),
+  launcher: () => Promise.all([import('./tools/launcher/QuickLaunchTool'), import('./shared/tool-page.css')]).then(([m]) => m),
   toolbox: () => import('./tools/toolbox/ToolboxTool'),
   notes: () => import('./tools/notes/NotesTool'),
 }
@@ -25,6 +25,8 @@ async function boot() {
       mod.mount(root)
     } else if (label.startsWith('tool-')) {
       const id = label.slice(5)
+      const names: Record<string, string> = { clipboard: '剪贴板历史', launcher: '快速启动', toolbox: '工具箱', notes: '笔记' }
+      document.title = `${names[id] ?? id} · tool-tool不绝`
       const loader = TOOL_IMPORTS[id]
       if (loader) {
         const mod = await loader()
