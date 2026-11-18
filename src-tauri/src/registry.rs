@@ -252,6 +252,23 @@ pub async fn launch_tool(app: tauri::AppHandle, state: State<'_, AppShared>, id:
 }
 
 #[tauri::command]
+pub fn save_settings(state: State<'_, AppShared>, settings: serde_json::Value) -> Result<(), String> {
+    let merged = {
+        let mut cur = state.settings.lock().unwrap();
+        // 浅合并：保留未传字段
+        if let (Some(a), Some(b)) = (cur.as_object_mut(), settings.as_object()) {
+            for (k, v) in b {
+                a.insert(k.clone(), v.clone());
+            }
+        }
+        cur.clone()
+    };
+    let path = data::data_dir().join("settings.json");
+    let s = serde_json::to_string_pretty(&merged).map_err(|e| e.to_string())?;
+    data::write_atomic(&path, &s).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn quit_app(app: tauri::AppHandle) {
     let _ = app.exit(0);
 }

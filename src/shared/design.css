@@ -257,6 +257,8 @@ input:focus-visible, textarea:focus-visible { outline: none; }
 .btn.danger { background: var(--danger); color: #fff; }
 .btn.danger:hover { filter: brightness(1.08); }
 
+.theme-btn { font-size: 12px; }
+
 /* 工具页通用占位 */
 .tool-page {
   flex: 1;

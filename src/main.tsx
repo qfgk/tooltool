@@ -14,10 +14,16 @@ const TOOL_IMPORTS: Record<string, () => Promise<{ mount: (root: HTMLElement) =>
 }
 
 async function boot() {
-  // 深色为默认主题（液态玻璃×Bento），浅色需在 settings 显式指定
+  // 主题按 settings 应用（默认 auto-time：6-18 点浅色，其余深色）
   try {
-    document.documentElement.dataset.theme ||= 'dark'
-  } catch { /* ignore */ }
+    const st = await (window as any).__TAURI_INTERNALS__.invoke('get_state')
+    const mode = st?.settings?.theme || 'auto-time'
+    const h = new Date().getHours()
+    document.documentElement.dataset.theme =
+      mode === 'dark' ? 'dark' : mode === 'light' ? 'light' : (h >= 6 && h < 18 ? 'light' : 'dark')
+  } catch {
+    document.documentElement.dataset.theme = 'dark'
+  }
   try {
     if (label === 'shell') {
       const mod = await import('./shell/Shell')

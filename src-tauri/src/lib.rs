@@ -129,6 +129,7 @@ pub fn run() {
             registry::add_external_tool,
             registry::get_state,
             registry::launch_tool,
+            registry::save_settings,
             registry::quit_app,
             quicklaunch::ql_list,
             quicklaunch::ql_save,

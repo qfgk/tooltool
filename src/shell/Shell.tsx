@@ -4,6 +4,7 @@ import { createSignal, For, Show, onMount, onCleanup } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { HOSTED_TOOLS, ICONS, type ToolMeta } from '../shared/registry'
+import { applyTheme, type ThemeMode } from '../shared/theme'
 
 interface ToolEntry {
   id: string
@@ -40,6 +41,8 @@ function Dashboard() {
   const [addOpen, setAddOpen] = createSignal(false)
   const [addForm, setAddForm] = createSignal({ name: '', command: '' })
   const [addErr, setAddErr] = createSignal('')
+  // 主题：auto-time（随时间）| dark | light
+  const [themeMode, setThemeMode] = createSignal<ThemeMode>('auto-time')
 
   let paletteInput: HTMLInputElement | undefined
 
@@ -49,13 +52,27 @@ function Dashboard() {
     try {
       const st = await invoke<{ settings: Record<string, any>; tools: ToolEntry[] }>('get_state')
       setTools(st.tools || [])
+      const mode = (st.settings?.theme as ThemeMode) || 'auto-time'
+      setThemeMode(mode)
+      applyTheme(mode)
+      // auto-time 模式下每小时刷新（昼夜翻转）
+      window.setInterval(() => applyTheme(mode), 3600_000)
     } catch { /* ignore */ }
   }
 
+  const cycleTheme = async () => {
+    const order: ThemeMode[] = ['auto-time', 'dark', 'light']
+    const next = order[(order.indexOf(themeMode()) + 1) % order.length]
+    setThemeMode(next)
+    applyTheme(next)
+    try { await invoke('save_settings', { settings: { theme: next } }) } catch { /* ignore */ }
+  }
+
+  const themeIcon = () => (themeMode() === 'dark' ? '🌙' : themeMode() === 'light' ? '☀️' : '🕐')
+  const themeLabel = () => (themeMode() === 'dark' ? '深色' : themeMode() === 'light' ? '浅色' : '随时间')
+
   onMount(async () => {
     await refreshTools()
-    const theme = (window as any).__tooltoolTheme ?? 'dark'
-    if (theme === 'light') document.documentElement.dataset.theme = 'light'
 
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -144,6 +161,14 @@ function Dashboard() {
             {greet()}，<em>开始专注</em>
           </span>
           <span style={{ display: 'inline-flex', 'align-items': 'center', gap: '10px' }}>
+            <button
+              class="ib theme-btn"
+              style={{ width: '26px', height: '26px', 'font-size': '13px' }}
+              title={`主题：${themeLabel()}（点击切换 固定深/固定浅/随时间）`}
+              onClick={() => void cycleTheme()}
+            >
+              {themeIcon()}
+            </button>
             <span class="date">{dateLine()}</span>
             <button
               class="ib"
