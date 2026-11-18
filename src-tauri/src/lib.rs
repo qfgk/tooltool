@@ -19,7 +19,12 @@ pub fn create_or_focus_tool<R: Runtime>(app: &tauri::AppHandle<R>, id: &str) -> 
         return Ok(());
     }
     let label2 = label.clone();
-    WebviewWindowBuilder::new(
+    // 级联偏移：新窗相对面板右下错开 48px，避免与主页完全重叠看不出是弹窗
+    let offset = app
+        .get_webview_window("shell")
+        .and_then(|w| w.outer_position().ok())
+        .map(|p| (p.x + 48, p.y + 56));
+    let mut builder = WebviewWindowBuilder::new(
         app,
         &label,
         WebviewUrl::App("index.html".into()),
@@ -34,12 +39,16 @@ pub fn create_or_focus_tool<R: Runtime>(app: &tauri::AppHandle<R>, id: &str) -> 
     .resizable(true)
     .additional_browser_args(
         "--disable-background-timer-throttling --disable-renderer-backgrounding --disable-backgrounding-occluded-windows --disable-features=CalculateNativeWinOcclusion",
-    )
-    .build()
-    .map_err(|e| {
-        eprintln!("[tooltool] 创建工具窗失败 {label2}: {e}");
-        format!("创建工具窗失败：{e}")
-    })?;
+    );
+    if let Some((x, y)) = offset {
+        builder = builder.position(x as f64, y as f64);
+    }
+    builder
+        .build()
+        .map_err(|e| {
+            eprintln!("[tooltool] 创建工具窗失败 {label2}: {e}");
+            format!("创建工具窗失败：{e}")
+        })?;
     Ok(())
 }
 

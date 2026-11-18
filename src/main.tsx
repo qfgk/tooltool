@@ -13,6 +13,8 @@ const TOOL_IMPORTS: Record<string, () => Promise<{ mount: (root: HTMLElement) =>
   notes: () => import('./tools/notes/NotesTool'),
 }
 
+const TOOL_TITLES: Record<string, string> = { clipboard: '剪贴板历史', launcher: '启动项管理', toolbox: '工具箱', notes: '笔记' }
+
 async function boot() {
   // 主题按 settings 应用（默认 auto-time：6-18 点浅色，其余深色）
   try {
@@ -24,6 +26,20 @@ async function boot() {
   } catch {
     document.documentElement.dataset.theme = 'dark'
   }
+
+  // 工具窗 body 标记，用于加边框区分弹窗与主页
+  if (label.startsWith('tool-')) document.body.dataset.window = 'tool'
+
+  // 空白处拖动：mousedown 目标不是可交互元素时启动窗口拖拽
+  const dragHit = (t: EventTarget | null): boolean => {
+    if (!(t instanceof Element)) return false
+    return !t.closest('button, input, textarea, select, label, .card, .glass-pop, .ql-grid, .tb-block, .palette, a')
+  }
+  window.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return
+    if (dragHit(e.target)) void win.startDragging().catch(() => {})
+  })
+
   try {
     if (label === 'shell') {
       const mod = await import('./shell/Shell')
@@ -31,8 +47,7 @@ async function boot() {
       mod.mount(root)
     } else if (label.startsWith('tool-')) {
       const id = label.slice(5)
-      const names: Record<string, string> = { clipboard: '剪贴板历史', launcher: '快速启动', toolbox: '工具箱', notes: '笔记' }
-      document.title = `${names[id] ?? id} · tool-tool不绝`
+      document.title = `${TOOL_TITLES[id] ?? id} · tool-tool不绝`
       const loader = TOOL_IMPORTS[id]
       if (loader) {
         const mod = await loader()

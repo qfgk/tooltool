@@ -20,10 +20,6 @@ async function badgeFor(id: string): Promise<string | null> {
       const s = await invoke<{ count: number }>('clip_stats')
       return s.count > 0 ? String(s.count) : null
     }
-    if (id === 'launcher') {
-      const list = await invoke<{ id: string }[]>('ql_list')
-      return list.length > 0 ? String(list.length) : null
-    }
     if (id === 'notes') {
       const list = await invoke<{ id: string }[]>('notes_list')
       return list.length > 0 ? String(list.length) : null
@@ -295,7 +291,7 @@ function Dashboard() {
 
       {/* 状态栏 */}
       <div class="foot-hint">
-        <span><kbd>Ctrl+Alt+T</kbd> 呼出 · <kbd>Ctrl+K</kbd> 面板</span>
+        <span />
         <span style={{ display: 'inline-flex', 'align-items': 'center', gap: '8px' }}>
           <span>主题：{themeLabel()}</span>
           <span>v0.1.0</span>

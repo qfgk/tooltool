@@ -64,16 +64,23 @@ impl Default for ToolEntry {
     }
 }
 
-/// 内置工具清单（编译期固定；窗口尺寸为默认值）
+/// 面板/托盘展示的内置工具（快速启动已并入主页启动项，不再单独成窗）
 pub const HOSTED_TOOLS: &[(&str, &str, f64, f64)] = &[
     ("clipboard", "剪贴板历史", 420.0, 560.0),
-    ("launcher", "快速启动", 600.0, 480.0),
     ("toolbox", "工具箱", 660.0, 540.0),
     ("notes", "笔记", 800.0, 580.0),
 ];
 
+/// 可创建窗口的全部内置工具（含面板不展示的管理窗）
+pub const ALL_HOSTED: &[(&str, &str, f64, f64)] = &[
+    ("launcher", "启动项管理", 640.0, 520.0),
+    HOSTED_TOOLS[0],
+    HOSTED_TOOLS[1],
+    HOSTED_TOOLS[2],
+];
+
 pub fn hosted_tool(id: &str) -> Option<ToolEntry> {
-    HOSTED_TOOLS
+    ALL_HOSTED
         .iter()
         .find(|(hid, _, _, _)| *hid == id)
         .map(|(hid, name, w, h)| ToolEntry {

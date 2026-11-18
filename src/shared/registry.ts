@@ -34,19 +34,14 @@ export const HOSTED_TOOLS: ToolMeta[] = [
     load: () => import('../tools/notes/NotesTool'),
   },
   {
-    id: 'launcher', name: '快速启动', icon: ICONS.rocket, kind: 'hosted',
-    desc: '应用 / 文件夹 / 网址一键打开',
-    load: () => import('../tools/launcher/QuickLaunchTool'),
+    id: 'clipboard', name: '剪贴板历史', icon: ICONS.clipboard, kind: 'hosted',
+    desc: '最近复制的内容，一键回贴',
+    load: () => import('../tools/clipboard/ClipboardTool'),
   },
   {
     id: 'toolbox', name: '工具箱', icon: ICONS.wrench, kind: 'hosted',
     desc: '时间戳 / 编码 / 哈希 / 转换',
     load: () => import('../tools/toolbox/ToolboxTool'),
-  },
-  {
-    id: 'clipboard', name: '剪贴板历史', icon: ICONS.clipboard, kind: 'hosted',
-    desc: '最近复制的内容，一键回贴',
-    load: () => import('../tools/clipboard/ClipboardTool'),
   },
 ]
 
