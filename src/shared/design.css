@@ -313,7 +313,7 @@ body.ready .win {
 .tool-placeholder .t1 { font-size: 14px; font-weight: 600; color: var(--text-2); }
 .tool-placeholder .t2 { font-size: 12px; }
 
-/* 卡片点击涟漪（JS 注入 span，transform/opacity 合成动画） */
+/* 卡片点击涟漪（JS 注入 span，transform/opacity 合成动画）——轻量版：低透明度、小扩散 */
 .card .ripple {
   position: absolute;
   width: 16px;
@@ -321,11 +321,11 @@ body.ready .win {
   border-radius: 50%;
   background: var(--brand-weak);
   transform: translate(-50%, -50%) scale(1);
-  animation: ripple-out 480ms var(--ease-out) forwards;
+  animation: ripple-out 360ms var(--ease-out) forwards;
   pointer-events: none;
 }
 @keyframes ripple-out {
-  to { transform: translate(-50%, -50%) scale(16); opacity: 0; }
+  to { transform: translate(-50%, -50%) scale(9); opacity: 0; }
 }
 
 /* 窗口未 ready 时隐藏（防白屏闪烁），ready 后进入动画 */

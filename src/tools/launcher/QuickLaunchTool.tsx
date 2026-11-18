@@ -60,6 +60,28 @@ function QuickLaunch() {
     setForm({ name: entry?.name ?? '', kind: entry?.kind ?? 'app', target: entry?.target ?? '' })
   }
 
+  /** 浏览选择：app=选文件(exe/lnk 等)，dir=选文件夹；自动带出文件名 */
+  const browseTarget = async () => {
+    try {
+      const { open } = await import('@tauri-apps/plugin-dialog')
+      if (form().kind === 'dir') {
+        const dir = await open({ directory: true, multiple: false, title: '选择文件夹' })
+        if (typeof dir === 'string') setForm({ ...form(), target: dir })
+      } else {
+        const file = await open({
+          multiple: false,
+          title: '选择程序或文件',
+          filters: [{ name: '可执行文件', extensions: ['exe', 'lnk', 'bat', 'cmd', 'url'] }, { name: '所有文件', extensions: ['*'] }],
+        })
+        if (typeof file === 'string') {
+          // 名称为空时自动带出文件名
+          const name = file.split(/[\\/]/).pop()?.replace(/\.(exe|lnk|bat|cmd|url)$/i, '') ?? ''
+          setForm({ ...form(), target: file, name: form().name.trim() || name })
+        }
+      }
+    } catch { /* 用户取消 */ }
+  }
+
   const saveForm = async () => {
     setFormErr('')
     try {
@@ -236,12 +258,18 @@ function QuickLaunch() {
               </For>
             </div>
             <label class="ql-label">{form().kind === 'url' ? '网址' : form().kind === 'dir' ? '文件夹路径' : '程序 / 文件路径'}</label>
-            <input
-              class="ql-input"
-              placeholder={form().kind === 'url' ? 'https://…' : 'D:\\…\\app.exe'}
-              value={form().target}
-              onInput={(e) => setForm({ ...form(), target: e.currentTarget.value })}
-            />
+            <div class="ql-target-row">
+              <input
+                class="ql-input"
+                style={{ flex: '1' }}
+                placeholder={form().kind === 'url' ? 'https://…' : 'D:\\…\\app.exe'}
+                value={form().target}
+                onInput={(e) => setForm({ ...form(), target: e.currentTarget.value })}
+              />
+              <Show when={form().kind !== 'url'}>
+                <button class="btn ghost" title="浏览选择" onClick={() => void browseTarget()}>浏览…</button>
+              </Show>
+            </div>
             <Show when={formErr()}>
               <div class="ql-err">{formErr()}</div>
             </Show>
