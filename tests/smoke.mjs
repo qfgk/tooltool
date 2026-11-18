@@ -91,10 +91,10 @@ async function main() {
   check('面板冷启动 ≤3s（进程起→前端 booted）', bootMs <= 3000, `${bootMs}ms`)
 
   const cards = await evalIn(shell, `document.querySelectorAll('.tool-card').length`)
-  // 4 内置（笔记 hero + 剪贴板 wide + 快启 std + 工具箱 std）+ 启动项卡（launcher.json，此前 PinTodo 已迁移 1 条）+ 添加卡
+  // 3 内置（笔记 hero + 剪贴板 wide + 工具箱 std）+ 启动项卡（launcher.json）+ 添加卡
   const qlCards = await evalIn(shell, `document.querySelectorAll('.tool-card.ql').length`)
   const addCards = await evalIn(shell, `document.querySelectorAll('.tool-card.add-card').length`)
-  check('Bento 网格渲染工具卡（内置+启动项+添加卡）', cards === 4 + qlCards + addCards, `cards=${cards} ql=${qlCards} add=${addCards}`)
+  check('Bento 网格渲染工具卡（内置+启动项+添加卡）', cards === 3 + qlCards + addCards, `cards=${cards} ql=${qlCards} add=${addCards}`)
   const greet = await evalIn(shell, `document.querySelector('.hero-greet .hi')?.textContent?.trim()`)
   check('问候语渲染（含渐变强调）', !!greet && greet.length > 0, greet)
   const searchH = await evalIn(shell, `document.querySelector('.head-search')?.offsetHeight`)
@@ -113,17 +113,18 @@ async function main() {
   await sleep(600)
   check('二次打开=聚焦（进程数不变）', countProcs() === 1, `procs=${countProcs()}`)
 
-  // 其余三张卡逐个打开（工具窗共存）
-  for (const idx of [1, 2, 3]) {
+  // 其余卡逐个打开：剪贴板(wide idx1) / 工具箱(std idx2) / 添加卡(打开启动项管理窗)
+  for (const idx of [1, 2]) {
     await evalIn(shell, `document.querySelectorAll('.tool-card')[${idx}].click()`)
   }
+  await evalIn(shell, `document.querySelector('.tool-card.add-card')?.click()`)
   await sleep(1500)
   const clipPage = await findPage(PORT, 'tool-clipboard')
   const toolboxPage = await findPage(PORT, 'tool-toolbox')
   const launcherPage = await findPage(PORT, 'tool-launcher')
   check('剪贴板窗已创建', !!clipPage)
   check('工具箱窗已创建', !!toolboxPage)
-  check('快速启动窗已创建', !!launcherPage)
+  check('启动项管理窗已创建', !!launcherPage)
   check('四工具窗共存（进程数仍=1）', countProcs() === 1, `procs=${countProcs()}`)
 
   console.log('■ 数据落盘与托盘')

@@ -4,6 +4,8 @@ mod quicklaunch;
 mod registry;
 mod tray;
 
+pub use registry::hosted_tool;
+
 use tauri::webview::WebviewWindowBuilder;
 use tauri::{Emitter, Manager, Runtime, WebviewUrl};
 use tauri_plugin_global_shortcut::GlobalShortcutExt;

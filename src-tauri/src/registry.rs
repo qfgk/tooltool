@@ -185,22 +185,17 @@ pub fn get_state(state: State<'_, AppShared>) -> serde_json::Value {
 /// （同步 command 内直接 build 动态窗口会死锁并停留在 about:blank，
 ///  见 tauri#13092 / #13963），async command + async_runtime::spawn 可规避。
 #[tauri::command]
-pub async fn launch_tool(app: tauri::AppHandle, state: State<'_, AppShared>, id: String) -> Result<(), String> {
-    let entry = all_tools(&state)
-        .into_iter()
-        .find(|t| t.id == id)
-        .ok_or_else(|| format!("未找到工具：{id}"))?;
-    match entry.kind.as_str() {
-        "hosted" => {
-            let app = app.clone();
-            let id = id.clone();
-            tauri::async_runtime::spawn(async move {
-                let _ = create_or_focus_tool::<tauri::Wry>(&app, &id);
-            });
-            Ok(())
-        }
-        other => Err(format!("未知工具类型：{other}")),
+pub async fn launch_tool(app: tauri::AppHandle, id: String) -> Result<(), String> {
+    // 判定用 ALL_HOSTED 全集（含启动项管理窗）；all_tools 仅是面板展示子集
+    if crate::hosted_tool(&id).is_none() {
+        return Err(format!("未找到工具：{id}"));
     }
+    let app2 = app.clone();
+    let id2 = id.clone();
+    tauri::async_runtime::spawn(async move {
+        let _ = create_or_focus_tool::<tauri::Wry>(&app2, &id2);
+    });
+    Ok(())
 }
 
 #[tauri::command]
