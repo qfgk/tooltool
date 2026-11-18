@@ -291,6 +291,28 @@
   user-select: none;
 }
 
+/* 搜索结果下拉（挂 header 下方，主页网格不随之变动） */
+.search-drop {
+  position: absolute;
+  top: 50px;
+  right: 96px;
+  width: 340px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 6px;
+  z-index: 40;
+  animation: pal-in 140ms var(--ease-out);
+}
+.search-drop .p-sub {
+  flex: 1;
+  font-size: 10.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
 /* 命令面板 */
 .palette-mask {
   position: absolute;

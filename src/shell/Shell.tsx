@@ -3,7 +3,7 @@ import { render } from 'solid-js/web'
 import { createSignal, For, Show, onMount, onCleanup } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
-import { HOSTED_TOOLS, ICONS, type ToolMeta } from '../shared/registry'
+import { HOSTED_TOOLS, ICONS } from '../shared/registry'
 import { applyTheme, type ThemeMode } from '../shared/theme'
 
 interface ToolEntry {
@@ -53,6 +53,7 @@ function Dashboard() {
   const [tools, setTools] = createSignal<ToolEntry[]>([])
   const [q, setQ] = createSignal('')
   const [searchFocus, setSearchFocus] = createSignal(false)
+  const [sIdx, setSIdx] = createSignal(0)
   const [paletteOpen, setPaletteOpen] = createSignal(false)
   const [paletteIdx, setPaletteIdx] = createSignal(0)
   // 主题：auto-time（随时间）| dark | light
@@ -70,6 +71,7 @@ function Dashboard() {
   const qlIds = () => qlEntries().map((e) => e.id)
 
   let paletteInput: HTMLInputElement | undefined
+  let headSearchInput: HTMLInputElement | undefined
 
   const refreshTools = async () => {
     try {
@@ -135,18 +137,29 @@ function Dashboard() {
 
   const qlIco = (k: string) => (k === 'url' ? ICONS.search : k === 'dir' ? '📁' : '🚀')
 
-  const filter = (list: ToolMeta[]) => {
+  // 网格恒定展示全集（不随搜索过滤——搜索结果走下拉，主页保持稳定）
+  const hosted = () => HOSTED_TOOLS
+
+  // 搜索下拉结果：内置工具 + 启动项（按名称/目标匹配）
+  const searchResults = () => {
     const kw = q().trim().toLowerCase()
-    if (!kw) return list
-    return list.filter((t) => t.name.toLowerCase().includes(kw) || t.desc.toLowerCase().includes(kw))
+    if (!kw) return [] as { id: string; name: string; sub: string; icon: string; kind: 'hosted' | 'ql' }[]
+    const hostedHits = HOSTED_TOOLS
+      .filter((t) => t.name.toLowerCase().includes(kw) || t.desc.toLowerCase().includes(kw))
+      .map((t) => ({ id: t.id, name: t.name, sub: t.desc, icon: t.icon, kind: 'hosted' as const }))
+    const qlHits = qlEntries()
+      .filter((e) => e.name.toLowerCase().includes(kw) || e.target.toLowerCase().includes(kw))
+      .map((e) => ({ id: e.id, name: e.name, sub: e.target, icon: ICONS.rocket, kind: 'ql' as const }))
+    return [...hostedHits, ...qlHits]
   }
-  const hosted = () => filter(HOSTED_TOOLS)
-  const external = () =>
-    filter(
-      tools()
-        .filter((t) => t.kind === 'external')
-        .map((t) => ({ id: t.id, name: t.name, icon: ICONS.pin, desc: t.command || '', kind: 'external' as const })),
-    )
+  const runSearch = (idx: number) => {
+    const item = searchResults()[idx]
+    if (!item) return
+    setQ('')
+    if (headSearchInput) headSearchInput.value = ''
+    if (item.kind === 'ql') invoke('ql_run', { id: item.id }).catch(() => {})
+    else launch(item.id)
+  }
   const paletteFiltered = () => {
     const kw = q().trim().toLowerCase()
     const all = [
@@ -171,9 +184,13 @@ function Dashboard() {
   }
 
   const searchEnter = () => {
-    // 粘贴的是网址 → 直接打开；否则启动第一个匹配工具
-    const all = [...hosted(), ...external()]
-    if (all[0]) launch(all[0].id)
+    // 粘贴的是网址 → 直接打开；否则启动当前选中的搜索结果
+    const raw = headSearchInput?.value.trim() ?? ''
+    if (/^https?:\/\//.test(raw)) {
+      invoke('ql_save', { entry: { id: '', name: raw, kind: 'url', target: raw } }).then(() => invoke('ql_run', { id: '' })).catch(() => {})
+      return
+    }
+    runSearch(sIdx())
   }
 
   return (
@@ -185,14 +202,18 @@ function Dashboard() {
         <div class="searchbox head-search" classList={{ focus: searchFocus() }}>
           <span class="s-ico" innerHTML={ICONS.search} />
           <input
-            placeholder="搜索…  ⌘K"
-            onInput={(e) => setQ(e.currentTarget.value)}
+            ref={headSearchInput}
+            placeholder="搜索工具或启动项…"
+            onInput={(e) => { setQ(e.currentTarget.value); setSIdx(0) }}
             onFocus={() => setSearchFocus(true)}
-            onBlur={() => setSearchFocus(false)}
+            onBlur={() => setTimeout(() => setSearchFocus(false), 150)}
             onKeyDown={(e) => {
               e.stopPropagation()
+              const n = searchResults().length
               if (e.key === 'Enter') searchEnter()
-              else if (e.key === 'Escape') { e.currentTarget.blur(); win.hide() }
+              else if (e.key === 'ArrowDown' && n) { e.preventDefault(); setSIdx((sIdx() + 1) % n) }
+              else if (e.key === 'ArrowUp' && n) { e.preventDefault(); setSIdx((sIdx() - 1 + n) % n) }
+              else if (e.key === 'Escape') { setQ(''); e.currentTarget.value = ''; e.currentTarget.blur() }
             }}
           />
         </div>
@@ -219,6 +240,30 @@ function Dashboard() {
           innerHTML={ICONS.close}
         />
       </header>
+
+      {/* 搜索结果下拉（主页网格不动，结果在这里选） */}
+      <Show when={q().trim() && searchFocus()}>
+        <div class="search-drop glass-pop">
+          <For each={searchResults()}>
+            {(item, i) => (
+              <button
+                class="palette-item"
+                classList={{ on: i() === sIdx() }}
+                onMouseEnter={() => setSIdx(i())}
+                onMouseDown={(e) => { e.preventDefault(); runSearch(i()) }}
+              >
+                <span class="p-ico" innerHTML={item.icon} />
+                <span class="p-name">{item.name}</span>
+                <span class="p-sub">{item.sub}</span>
+                <Show when={item.kind === 'ql'}><span class="p-kind">启动项</span></Show>
+              </button>
+            )}
+          </For>
+          <Show when={!searchResults().length}>
+            <div class="palette-empty">没有匹配项</div>
+          </Show>
+        </div>
+      </Show>
 
       {/* 问候行（紧凑） */}
       <div class="hero-greet">
@@ -287,17 +332,12 @@ function Dashboard() {
             )
           }}
         </For>
-        {/* 添加卡：打开快速启动器管理 */}
-        <Show when={!q().trim()}>
-          <button class="card hoverable tool-card std add-card" onClick={() => launch('launcher')} title="添加应用 / 文件夹 / 网址，支持扫描文件夹批量导入">
-            <span class="tool-ico add" innerHTML={ICONS.plus} />
-            <span class="tool-name">添加启动项</span>
-            <span class="tool-desc">应用 / 文件夹 / 网址</span>
-          </button>
-        </Show>
-        <Show when={!hosted().length && !external().length}>
-          <div class="bento-empty">没有匹配的工具</div>
-        </Show>
+        {/* 添加卡：打开快速启动器管理（恒定展示，主页不随搜索变动） */}
+        <button class="card hoverable tool-card std add-card" onClick={() => launch('launcher')} title="添加应用 / 文件夹 / 网址，支持扫描文件夹批量导入">
+          <span class="tool-ico add" innerHTML={ICONS.plus} />
+          <span class="tool-name">添加启动项</span>
+          <span class="tool-desc">应用 / 文件夹 / 网址</span>
+        </button>
       </div>
 
       {/* 状态栏 */}
