@@ -124,6 +124,89 @@
   color: var(--text-2);
 }
 
+/* 外部工具卡：hover 删除按钮 */
+.ext-del {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  color: var(--text-3);
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity var(--t-fast) ease, color var(--t-fast) ease, background var(--t-fast) ease;
+}
+.tool-card:hover .ext-del { opacity: 0.8; }
+.ext-del:hover { color: var(--danger); background: var(--danger-weak); opacity: 1 !important; }
+
+/* 添加外部工具卡片 */
+.tool-card.add .tool-ico.add {
+  background: var(--surface-dim);
+  color: var(--brand);
+  border: 1.5px dashed var(--brand);
+  box-shadow: none;
+}
+.tool-card.add .tool-name { color: var(--brand); }
+
+/* 一键注册 PinTodo */
+.quick-pin {
+  font-size: 10.5px;
+  color: var(--brand);
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: background var(--t-fast) ease;
+}
+.quick-pin:hover { background: var(--brand-weak); }
+
+/* 添加外部工具表单 */
+.add-card-pop {
+  width: 100%;
+  max-width: 420px;
+  padding: 18px;
+}
+.add-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
+.add-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-2);
+  margin: 10px 0 5px;
+}
+.add-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: var(--r-sm);
+  background: var(--surface-dim);
+  border: 1px solid var(--line);
+  font-size: 12.5px;
+  user-select: text;
+  transition: border-color var(--t-fast) ease, box-shadow var(--t-fast) ease;
+}
+.add-input:focus {
+  border-color: transparent;
+  box-shadow: var(--ring);
+  background: var(--surface);
+}
+.add-err {
+  margin-top: 10px;
+  font-size: 11.5px;
+  color: var(--danger);
+  background: var(--danger-weak);
+  border-radius: var(--r-sm);
+  padding: 6px 10px;
+}
+.add-acts {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
 /* 命令面板 */
 .palette-mask {
   position: absolute;

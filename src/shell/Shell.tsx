@@ -36,16 +36,26 @@ function Dashboard() {
   const [q, setQ] = createSignal('')
   const [paletteOpen, setPaletteOpen] = createSignal(false)
   const [paletteIdx, setPaletteIdx] = createSignal(0)
+  // 外部工具表单
+  const [addOpen, setAddOpen] = createSignal(false)
+  const [addForm, setAddForm] = createSignal({ name: '', command: '' })
+  const [addErr, setAddErr] = createSignal('')
 
   let paletteInput: HTMLInputElement | undefined
 
-  onMount(async () => {
+  const PIN_TODO_EXE = 'D:\\ai\\todo\\src-tauri\\target\\release\\todo.exe'
+
+  const refreshTools = async () => {
     try {
       const st = await invoke<{ settings: Record<string, any>; tools: ToolEntry[] }>('get_state')
       setTools(st.tools || [])
-      const theme = (st as any).settings?.theme
-      if (theme === 'light') document.documentElement.dataset.theme = 'light'
     } catch { /* ignore */ }
+  }
+
+  onMount(async () => {
+    await refreshTools()
+    const theme = (window as any).__tooltoolTheme ?? 'dark'
+    if (theme === 'light') document.documentElement.dataset.theme = 'light'
 
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -55,13 +65,38 @@ function Dashboard() {
         setPaletteIdx(0)
         if (next) setTimeout(() => paletteInput?.focus(), 30)
       } else if (e.key === 'Escape') {
-        if (paletteOpen()) setPaletteOpen(false)
-        else getCurrentWindow().hide()
+        if (paletteOpen() || addOpen()) {
+          setPaletteOpen(false)
+          setAddOpen(false)
+        } else getCurrentWindow().hide()
       }
     }
     window.addEventListener('keydown', onKey)
     onCleanup(() => window.removeEventListener('keydown', onKey))
   })
+
+  const addExternal = async () => {
+    setAddErr('')
+    try {
+      await invoke('add_external_tool', { name: addForm().name, command: addForm().command })
+      setAddOpen(false)
+      setAddForm({ name: '', command: '' })
+      await refreshTools()
+    } catch (e) { setAddErr(String(e)) }
+  }
+
+  const removeExternal = async (id: string) => {
+    try {
+      await invoke('remove_tool', { id })
+      await refreshTools()
+    } catch (e) { console.error(e) }
+  }
+
+  const quickAddPinTodo = () => {
+    setAddOpen(true)
+    setAddErr('')
+    setAddForm({ name: 'PinTodo 待办', command: PIN_TODO_EXE })
+  }
 
   const filter = (list: ToolMeta[]) => {
     const kw = q().trim().toLowerCase()
@@ -155,9 +190,23 @@ function Dashboard() {
               <span class="tool-ico ext" innerHTML={t.icon} />
               <span class="tool-name">{t.name}</span>
               <span class="tool-desc">{t.desc}</span>
+              <span
+                class="ext-del"
+                title="移除此工具"
+                onClick={(ev) => { ev.stopPropagation(); removeExternal(t.id) }}
+                innerHTML={ICONS.close}
+              />
             </button>
           )}
         </For>
+        {/* 添加外部工具卡片 */}
+        <Show when={!q().trim()}>
+          <button class="card hoverable tool-card add-card" onClick={() => { setAddOpen(true); setAddErr(''); setAddForm({ name: '', command: '' }) }}>
+            <span class="tool-ico add" innerHTML={ICONS.plus} />
+            <span class="tool-name">添加外部工具</span>
+            <span class="tool-desc">exe / 脚本 / 任意程序</span>
+          </button>
+        </Show>
         <Show when={!hosted().length && !external().length}>
           <div class="bento-empty">没有匹配的工具</div>
         </Show>
@@ -168,8 +217,43 @@ function Dashboard() {
         <span>
           <kbd>Ctrl+Alt+T</kbd> 呼出 / 隐藏 · <kbd>Ctrl+K</kbd> 命令面板
         </span>
-        <span>点击卡片启动工具</span>
+        <Show when={!tools().some((t) => t.kind === 'external' && t.id.startsWith('ext-'))} fallback={<span>点击卡片启动工具</span>}>
+          <button class="quick-pin" onClick={quickAddPinTodo}>⚡ 一键注册 PinTodo</button>
+        </Show>
       </div>
+
+      {/* 添加外部工具表单 */}
+      <Show when={addOpen()}>
+        <div
+          class="palette-mask"
+          onClick={(e) => { if (e.target === e.currentTarget) setAddOpen(false) }}
+        >
+          <div class="glass-pop add-card-pop">
+            <div class="add-title">添加外部工具</div>
+            <label class="add-label">名称</label>
+            <input
+              class="add-input"
+              placeholder="例如：PinTodo 待办"
+              value={addForm().name}
+              onInput={(e) => setAddForm({ ...addForm(), name: e.currentTarget.value })}
+            />
+            <label class="add-label">目标（exe / lnk / 脚本路径）</label>
+            <input
+              class="add-input"
+              placeholder="D:\\app\\tool.exe"
+              value={addForm().command}
+              onInput={(e) => setAddForm({ ...addForm(), command: e.currentTarget.value })}
+            />
+            <Show when={addErr()}>
+              <div class="add-err">{addErr()}</div>
+            </Show>
+            <div class="add-acts">
+              <button class="btn ghost" onClick={() => setAddOpen(false)}>取消</button>
+              <button class="btn primary" onClick={addExternal}>添加</button>
+            </div>
+          </div>
+        </div>
+      </Show>
 
       {/* 命令面板 */}
       <Show when={paletteOpen()}>
