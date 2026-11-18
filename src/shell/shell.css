@@ -1,20 +1,16 @@
-/* 面板专属：问候区 + 大搜索 + 3 列工具网格 + 命令面板 */
+/* 面板专属：仪表盘 Bento 布局 + 命令面板 */
 
-.hero {
-  flex: none;
-  padding: 26px 28px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
+/* 问候行（紧凑 28px） */
 .hero-greet {
+  flex: none;
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
+  padding: 6px 24px 12px;
   user-select: none;
 }
 .hero-greet .hi {
-  font-size: 19px;
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: 0.3px;
 }
@@ -26,39 +22,47 @@
   color: transparent;
 }
 .hero-greet .date {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-3);
   font-variant-numeric: tabular-nums;
 }
-.hero-search {
-  height: 46px;
-  border-radius: var(--r-md);
-  font-size: 13.5px;
-}
 
-/* 工具网格：3 列 */
+/* 仪表盘栅格：4 列 × 108px 行 */
 .bento {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: 108px;
   gap: 12px;
-  padding: 4px 28px 20px;
+  padding: 0 24px 16px;
   overflow-y: auto;
-  align-content: start;
   min-height: 0;
 }
 
+/* 卡片基础布局（纵向堆叠，Bento 全级别共用） */
 .tool-card {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 8px;
-  padding: 16px;
-  text-align: left;
-  user-select: none;
-  min-height: 118px;
+  padding: 14px 16px;
+  min-width: 0;
 }
-.tool-card .tool-ico {
+.tool-card .tool-ico { flex: none; }
+.tool-card .tool-desc {
+  font-size: 10.5px;
+  color: var(--text-3);
+  line-height: 1.4;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 徽标气泡：无值时不渲染（JSX 条件），有值才占位 */
+
+/* Hero 2×2 */
+.tool-card.hero { grid-column: span 2; grid-row: span 2; }
+.tool-card.hero .tool-ico {
   width: 44px;
   height: 44px;
   border-radius: var(--r-md);
@@ -67,61 +71,110 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.25),
-    0 4px 14px var(--brand-glow);
+  font-size: 21px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 4px 14px var(--brand-glow);
 }
-.tool-card .tool-ico.ext {
+.tool-card.hero .hero-num {
+  font-size: 30px;
+  font-weight: 750;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.5px;
+}
+.tool-card.hero .hero-num-label {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: -4px;
+}
+
+/* Wide 2×1 */
+.tool-card.wide { grid-column: span 2; }
+.wide-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.tool-card.wide .tool-ico.sm {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--grad-brand);
+  color: var(--on-brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 10px var(--brand-glow);
+}
+.tool-card.wide .wide-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--brand);
+  background: var(--brand-weak);
+  border-radius: 8px;
+  padding: 1px 8px;
+  font-variant-numeric: tabular-nums;
+}
+.wide-preview {
+  width: 100%;
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+/* Std 1×1（工具窗通用 tool-card 基础上微调） */
+.tool-card.std { padding: 14px; min-height: 0; }
+.tool-card.std .tool-ico {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: var(--grad-brand);
+  color: var(--on-brand);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 10px var(--brand-glow);
+}
+.tool-card.std .tool-ico.ext {
   background: var(--surface-dim);
   color: var(--brand);
   border: 1px solid var(--line-strong);
   box-shadow: none;
 }
-.tool-card .tool-name {
-  font-size: 13px;
-  font-weight: 650;
-  margin-top: 2px;
+.tool-card.std .tool-name { font-size: 12.5px; margin-top: 6px; }
+.tool-card.std .tool-desc { font-size: 10.5px; }
+.tool-card.std .tool-ico.add {
+  background: transparent;
+  color: var(--brand);
+  border: 1.5px dashed var(--brand);
+  box-shadow: none;
 }
-.tool-card .tool-desc {
-  font-size: 11px;
-  color: var(--text-3);
-  line-height: 1.45;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 100%;
-}
+.tool-card.add .tool-name { color: var(--brand); }
 
-.bento-empty {
-  grid-column: 1 / -1;
-  display: flex;
+/* 实时徽标（hero 右上角气泡） */
+.card-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 9px;
+  background: var(--brand-weak);
+  color: var(--brand);
+  font-size: 10.5px;
+  font-weight: 700;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-3);
-  font-size: 12.5px;
-  padding: 36px 0;
-}
-
-/* 底部状态行 */
-.foot-hint {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 28px 14px;
-  font-size: 10.5px;
-  color: var(--text-3);
-  user-select: none;
-}
-.foot-hint kbd {
-  font-family: inherit;
-  font-size: 10px;
-  padding: 1px 6px;
-  border-radius: 6px;
-  background: var(--surface-dim);
-  border: 1px solid var(--line);
-  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  border: 1px solid color-mix(in srgb, var(--brand) 25%, transparent);
 }
 
 /* 外部工具卡：hover 删除按钮 */
@@ -139,18 +192,27 @@
   border-radius: 6px;
   opacity: 0;
   transition: opacity var(--t-fast) ease, color var(--t-fast) ease, background var(--t-fast) ease;
+  z-index: 2;
 }
 .tool-card:hover .ext-del { opacity: 0.8; }
 .ext-del:hover { color: var(--danger); background: var(--danger-weak); opacity: 1 !important; }
 
-/* 添加外部工具卡片 */
-.tool-card.add .tool-ico.add {
-  background: var(--surface-dim);
-  color: var(--brand);
-  border: 1.5px dashed var(--brand);
-  box-shadow: none;
+/* 卡片进入动画（stagger 由 style 内联 delay 控制） */
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-.tool-card.add .tool-name { color: var(--brand); }
+.bento .card { animation: card-in var(--t-slow) var(--ease-out) both; }
+
+.bento-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-3);
+  font-size: 12.5px;
+  padding: 36px 0;
+}
 
 /* 一键注册 PinTodo */
 .quick-pin {
@@ -163,11 +225,7 @@
 .quick-pin:hover { background: var(--brand-weak); }
 
 /* 添加外部工具表单 */
-.add-card-pop {
-  width: 100%;
-  max-width: 420px;
-  padding: 18px;
-}
+.add-card-pop { width: 100%; max-width: 420px; padding: 18px; }
 .add-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; }
 .add-label {
   display: block;
@@ -200,12 +258,20 @@
   border-radius: var(--r-sm);
   padding: 6px 10px;
 }
-.add-acts {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 16px;
+.add-acts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+/* 标题栏内联搜索 */
+.head-search {
+  width: 260px;
+  height: 30px;
+  border-radius: var(--r-sm);
 }
+.head-search input { font-size: 12px; }
+.head-search.focus, .head-search:focus-within {
+  background: var(--surface);
+  box-shadow: var(--ring), 0 0 20px var(--brand-glow);
+}
+.theme-btn { font-size: 12px; }
 
 /* 命令面板 */
 .palette-mask {
@@ -223,21 +289,9 @@
   from { opacity: 0; transform: translateY(-8px) scale(0.99); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
-.palette {
-  width: 100%;
-  max-width: 520px;
-  overflow: hidden;
-}
-.palette-input {
-  margin: 12px 12px 8px;
-  height: 44px;
-  background: var(--surface-dim);
-}
-.palette-list {
-  max-height: 330px;
-  overflow-y: auto;
-  padding: 6px 10px 12px;
-}
+.palette { width: 100%; max-width: 520px; overflow: hidden; }
+.palette-input { margin: 12px 12px 8px; height: 44px; background: var(--surface-dim); }
+.palette-list { max-height: 330px; overflow-y: auto; padding: 6px 10px 12px; }
 .palette-item {
   width: 100%;
   display: flex;
@@ -264,9 +318,4 @@
   border-radius: 6px;
   padding: 1px 6px;
 }
-.palette-empty {
-  padding: 26px 0;
-  text-align: center;
-  color: var(--text-3);
-  font-size: 12px;
-}
+.palette-empty { padding: 26px 0; text-align: center; color: var(--text-3); font-size: 12px; }

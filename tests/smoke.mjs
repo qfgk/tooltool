@@ -96,8 +96,8 @@ async function main() {
   check('Bento 网格渲染工具卡（4 内置 + 外部 + 添加卡）', cards === 4 + extCards + addCards, `cards=${cards} ext=${extCards} add=${addCards}`)
   const greet = await evalIn(shell, `document.querySelector('.hero-greet .hi')?.textContent?.trim()`)
   check('问候语渲染（含渐变强调）', !!greet && greet.length > 0, greet)
-  const searchH = await evalIn(shell, `document.querySelector('.hero-search')?.offsetHeight`)
-  check('Raycast 式大搜索框渲染', searchH >= 40, `h=${searchH}`)
+  const searchH = await evalIn(shell, `document.querySelector('.head-search')?.offsetHeight`)
+  check('标题栏内联搜索框渲染', searchH !== undefined && searchH > 0, `h=${searchH}`)
 
   console.log('■ 工具窗创建与聚焦')
   // 面板点击 → 创建工具窗

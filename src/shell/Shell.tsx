@@ -1,6 +1,6 @@
-// 工作台主面板：问候 + Raycast 式搜索优先 + 3 列工具网格 + Ctrl+K 命令面板
+// 工作台主面板（仪表盘）：Bento 三级卡片 + 实时徽标 + 内联搜索 + Ctrl+K 命令面板
 import { render } from 'solid-js/web'
-import { createSignal, For, Show, onMount, onCleanup } from 'solid-js'
+import { createSignal, createMemo, For, Show, onMount, onCleanup } from 'solid-js'
 import { invoke } from '@tauri-apps/api/core'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { HOSTED_TOOLS, ICONS, type ToolMeta } from '../shared/registry'
@@ -11,6 +11,26 @@ interface ToolEntry {
   name: string
   kind: 'hosted' | 'external'
   command?: string
+}
+
+/** 各工具实时徽标 provider：面板每次显示时拉取 */
+async function badgeFor(id: string): Promise<string | null> {
+  try {
+    if (id === 'clipboard') {
+      const s = await invoke<{ count: number }>('clip_stats')
+      return s.count > 0 ? String(s.count) : null
+    }
+    if (id === 'launcher') {
+      const list = await invoke<{ id: string }[]>('ql_list')
+      return list.length > 0 ? String(list.length) : null
+    }
+    if (id === 'notes') {
+      const list = await invoke<{ id: string }[]>('notes_list')
+      return list.length > 0 ? String(list.length) : null
+    }
+    if (id === 'toolbox') return '6'
+  } catch { /* 工具未实现命令前静默 */ }
+  return null
 }
 
 function greet(): string {
@@ -33,18 +53,20 @@ export function mount(root: HTMLElement) {
 }
 
 function Dashboard() {
+  const win = getCurrentWindow()
   const [tools, setTools] = createSignal<ToolEntry[]>([])
   const [q, setQ] = createSignal('')
+  const [searchFocus, setSearchFocus] = createSignal(false)
   const [paletteOpen, setPaletteOpen] = createSignal(false)
   const [paletteIdx, setPaletteIdx] = createSignal(0)
-  // 外部工具表单
   const [addOpen, setAddOpen] = createSignal(false)
   const [addForm, setAddForm] = createSignal({ name: '', command: '' })
   const [addErr, setAddErr] = createSignal('')
-  // 主题：auto-time（随时间）| dark | light
   const [themeMode, setThemeMode] = createSignal<ThemeMode>('auto-time')
+  const [badges, setBadges] = createSignal<Record<string, string>>({})
 
   let paletteInput: HTMLInputElement | undefined
+  let searchInput: HTMLInputElement | undefined
 
   const PIN_TODO_EXE = 'D:\\ai\\todo\\src-tauri\\target\\release\\todo.exe'
 
@@ -55,24 +77,33 @@ function Dashboard() {
       const mode = (st.settings?.theme as ThemeMode) || 'auto-time'
       setThemeMode(mode)
       applyTheme(mode)
-      // auto-time 模式下每小时刷新（昼夜翻转）
-      window.setInterval(() => applyTheme(mode), 3600_000)
     } catch { /* ignore */ }
   }
 
-  const cycleTheme = async () => {
-    const order: ThemeMode[] = ['auto-time', 'dark', 'light']
-    const next = order[(order.indexOf(themeMode()) + 1) % order.length]
-    setThemeMode(next)
-    applyTheme(next)
-    try { await invoke('save_settings', { settings: { theme: next } }) } catch { /* ignore */ }
+  const loadBadges = async () => {
+    const out: Record<string, string> = {}
+    await Promise.all(
+      HOSTED_TOOLS.map(async (t) => {
+        const b = await badgeFor(t.id)
+        if (b) out[t.id] = b
+      }),
+    )
+    setBadges(out)
   }
-
-  const themeIcon = () => (themeMode() === 'dark' ? '🌙' : themeMode() === 'light' ? '☀️' : '🕐')
-  const themeLabel = () => (themeMode() === 'dark' ? '深色' : themeMode() === 'light' ? '浅色' : '随时间')
 
   onMount(async () => {
     await refreshTools()
+    await loadBadges()
+    // 面板每次显示时刷新徽标与数据
+    const onVisible = async () => {
+      await refreshTools()
+      await loadBadges()
+    }
+    window.addEventListener('focus', onVisible)
+    onCleanup(() => {
+      window.removeEventListener('focus', onVisible)
+      window.removeEventListener('keydown', onKey)
+    })
 
     const onKey = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
@@ -85,12 +116,22 @@ function Dashboard() {
         if (paletteOpen() || addOpen()) {
           setPaletteOpen(false)
           setAddOpen(false)
-        } else getCurrentWindow().hide()
+        } else win.hide()
       }
     }
     window.addEventListener('keydown', onKey)
-    onCleanup(() => window.removeEventListener('keydown', onKey))
   })
+
+  const cycleTheme = async () => {
+    const order: ThemeMode[] = ['auto-time', 'dark', 'light']
+    const next = order[(order.indexOf(themeMode()) + 1) % order.length]
+    setThemeMode(next)
+    applyTheme(next)
+    try { await invoke('save_settings', { settings: { theme: next } }) } catch { /* ignore */ }
+  }
+
+  const themeIcon = () => (themeMode() === 'dark' ? '🌙' : themeMode() === 'light' ? '☀️' : '🕐')
+  const themeLabel = () => (themeMode() === 'dark' ? '深色' : themeMode() === 'light' ? '浅色' : '随时间')
 
   const addExternal = async () => {
     setAddErr('')
@@ -139,9 +180,7 @@ function Dashboard() {
     return all.filter((t) => t.name.toLowerCase().includes(kw))
   }
 
-  const launch = (id: string) => {
-    invoke('launch_tool', { id }).catch((e) => console.error(e))
-  }
+  const launch = (id: string) => invoke('launch_tool', { id }).catch((e) => console.error(e))
 
   const runPalette = (idx: number) => {
     const item = paletteFiltered()[idx]
@@ -152,57 +191,103 @@ function Dashboard() {
     launch(item.id)
   }
 
+  const searchEnter = () => {
+    const raw = searchInput?.value.trim() ?? ''
+    // 粘贴的是网址 → 直接打开；否则启动第一个匹配工具
+    if (/^https?:\/\//.test(raw)) {
+      invoke('open_url', { url: raw }).catch(() => {})
+      return
+    }
+    const all = [...hosted(), ...external()]
+    if (all[0]) launch(all[0].id)
+  }
+
+  // hero 卡片默认 PinTodo（hosted 第一个可显示徽标的；固定为 PinTodo 语义）
+  const heroCard = createMemo(() => HOSTED_TOOLS.find((t) => t.id === 'notes') ?? HOSTED_TOOLS[0])
+  void heroCard
+
   return (
     <div class="win">
-      {/* 问候区 + Raycast 式大搜索 */}
-      <div class="hero">
-        <div class="hero-greet">
-          <span class="hi">
-            {greet()}，<em>开始专注</em>
-          </span>
-          <span style={{ display: 'inline-flex', 'align-items': 'center', gap: '10px' }}>
-            <button
-              class="ib theme-btn"
-              style={{ width: '26px', height: '26px', 'font-size': '13px' }}
-              title={`主题：${themeLabel()}（点击切换 固定深/固定浅/随时间）`}
-              onClick={() => void cycleTheme()}
-            >
-              {themeIcon()}
-            </button>
-            <span class="date">{dateLine()}</span>
-            <button
-              class="ib"
-              style={{ width: '26px', height: '26px', 'font-size': '13px' }}
-              title="关闭（隐藏到托盘）"
-              onClick={() => getCurrentWindow().hide()}
-              innerHTML={ICONS.close}
-            />
-          </span>
-        </div>
-        <div class="searchbox hero-search">
+      {/* 标题栏：品牌 + 内联搜索 + 主题/设置/关闭 */}
+      <header class="win-head" data-tauri-drag-region>
+        <span class="win-title"><span class="dot" /> tool-tool不绝</span>
+        <span class="drag" data-tauri-drag-region />
+        <div class="searchbox head-search" classList={{ focus: searchFocus() }}>
           <span class="s-ico" innerHTML={ICONS.search} />
           <input
-            placeholder="搜索工具，回车启动第一个…"
+            placeholder="搜索…  ⌘K"
             onInput={(e) => setQ(e.currentTarget.value)}
+            onFocus={() => setSearchFocus(true)}
+            onBlur={() => setSearchFocus(false)}
             onKeyDown={(e) => {
               e.stopPropagation()
-              if (e.key === 'Enter') {
-                const all = [...hosted(), ...external()]
-                if (all[0]) launch(all[0].id)
-              } else if (e.key === 'Escape') {
-                getCurrentWindow().hide()
-              }
+              if (e.key === 'Enter') searchEnter()
+              else if (e.key === 'Escape') { e.currentTarget.blur(); win.hide() }
             }}
           />
-          <button class="ib" style={{ width: '24px', height: '24px', 'font-size': '11px' }} title="命令面板 (Ctrl+K)" onClick={() => { setPaletteOpen(true); setTimeout(() => paletteInput?.focus(), 30) }} innerHTML={ICONS.dots} />
         </div>
+        <button
+          class="ib theme-btn"
+          style={{ width: '28px', height: '28px', 'font-size': '13px' }}
+          title={`主题：${themeLabel()}（点击切换 固定深/固定浅/随时间）`}
+          onClick={() => void cycleTheme()}
+        >
+          {themeIcon()}
+        </button>
+        <button class="ib" style={{ width: '28px', height: '28px' }} title="添加外部工具" onClick={() => { setAddOpen(true); setAddErr(''); setAddForm({ name: '', command: '' }) }} innerHTML={ICONS.plus} />
+        <button
+          class="ib close"
+          style={{ width: '28px', height: '28px' }}
+          title="关闭（隐藏到托盘）"
+          onClick={() => win.hide()}
+          innerHTML={ICONS.close}
+        />
+      </header>
+
+      {/* 问候行（紧凑） */}
+      <div class="hero-greet">
+        <span class="hi">
+          {greet()}，<em>开始专注</em>
+        </span>
+        <span class="date">{dateLine()}</span>
       </div>
 
-      {/* 工具网格 */}
+      {/* Bento 仪表盘：hero 2×2 + wide 2×1 + std 1×1 */}
       <div class="bento">
-        <For each={hosted()}>
+        {/* Hero 2×2：笔记（默认主卡） */}
+        <For each={hosted().filter((t) => t.id === heroId())}>
           {(t) => (
-            <button class="card hoverable tool-card" onClick={() => launch(t.id)} title={t.desc}>
+            <button class="card hoverable tool-card hero" onClick={() => launch(t.id)} title={t.desc}>
+              <Show when={badges()[t.id]}><span class="card-badge">{badges()[t.id]}</span></Show>
+              <span class="tool-ico" innerHTML={t.icon} />
+              <span class="tool-name">{t.name}</span>
+              <span class="hero-num">{badges()[t.id] ?? '0'}</span>
+              <span class="hero-num-label">{t.id === 'notes' ? '篇笔记' : '条目'}</span>
+              <span class="tool-desc">{t.desc}</span>
+            </button>
+          )}
+        </For>
+
+        {/* Wide 2×1：剪贴板 */}
+        <For each={hosted().filter((t) => t.id === 'clipboard')}>
+          {(t) => (
+            <button class="card hoverable tool-card wide" onClick={() => launch(t.id)} title={t.desc}>
+              <span class="card-badge">{badges()[t.id] ?? ''}</span>
+              <div class="wide-top">
+                <span class="tool-ico sm" innerHTML={t.icon} />
+                <span class="tool-name">{t.name}</span>
+                <Show when={badges()[t.id]}><span class="wide-badge">{badges()[t.id]}</span></Show>
+              </div>
+              <span class="wide-preview">最近复制的内容，一键回贴</span>
+            </button>
+          )}
+        </For>
+
+        {/* Std 1×1：快速启动 / 工具箱 / 外部 / 添加 */}
+        <For each={hosted().filter((t) => t.id !== heroId() && t.id !== 'clipboard')}>
+          {(t) => (
+            <button class="card hoverable tool-card std" onClick={() => launch(t.id)} title={t.desc}>
+              <Show when={badges()[t.id]}><span class="card-badge">{badges()[t.id]}</span></Show>
               <span class="tool-ico" innerHTML={t.icon} />
               <span class="tool-name">{t.name}</span>
               <span class="tool-desc">{t.desc}</span>
@@ -211,24 +296,19 @@ function Dashboard() {
         </For>
         <For each={external()}>
           {(t) => (
-            <button class="card hoverable tool-card" onClick={() => launch(t.id)} title={t.desc}>
+            <button class="card hoverable tool-card std ext" onClick={() => launch(t.id)} title={t.desc}>
+              <span class="ext-del" title="移除此工具" onClick={(ev) => { ev.stopPropagation(); removeExternal(t.id) }} innerHTML={ICONS.close} />
               <span class="tool-ico ext" innerHTML={t.icon} />
               <span class="tool-name">{t.name}</span>
               <span class="tool-desc">{t.desc}</span>
-              <span
-                class="ext-del"
-                title="移除此工具"
-                onClick={(ev) => { ev.stopPropagation(); removeExternal(t.id) }}
-                innerHTML={ICONS.close}
-              />
             </button>
           )}
         </For>
         {/* 添加外部工具卡片 */}
         <Show when={!q().trim()}>
-          <button class="card hoverable tool-card add-card" onClick={() => { setAddOpen(true); setAddErr(''); setAddForm({ name: '', command: '' }) }}>
+          <button class="card hoverable tool-card std add-card" onClick={() => { setAddOpen(true); setAddErr(''); setAddForm({ name: '', command: '' }) }}>
             <span class="tool-ico add" innerHTML={ICONS.plus} />
-            <span class="tool-name">添加外部工具</span>
+            <span class="tool-name">添加工具</span>
             <span class="tool-desc">exe / 脚本 / 任意程序</span>
           </button>
         </Show>
@@ -237,38 +317,25 @@ function Dashboard() {
         </Show>
       </div>
 
-      {/* 底部提示 */}
+      {/* 状态栏 */}
       <div class="foot-hint">
-        <span>
-          <kbd>Ctrl+Alt+T</kbd> 呼出 / 隐藏 · <kbd>Ctrl+K</kbd> 命令面板
+        <span><kbd>Ctrl+Alt+T</kbd> 呼出 · <kbd>Ctrl+K</kbd> 面板</span>
+        <span style={{ display: 'inline-flex', 'align-items': 'center', gap: '8px' }}>
+          <button class="quick-pin" onClick={quickAddPinTodo}>⚡ 注册 PinTodo</button>
+          <span>主题：{themeLabel()}</span>
+          <span>v0.1.0</span>
         </span>
-        <Show when={!tools().some((t) => t.kind === 'external' && t.id.startsWith('ext-'))} fallback={<span>点击卡片启动工具</span>}>
-          <button class="quick-pin" onClick={quickAddPinTodo}>⚡ 一键注册 PinTodo</button>
-        </Show>
       </div>
 
       {/* 添加外部工具表单 */}
       <Show when={addOpen()}>
-        <div
-          class="palette-mask"
-          onClick={(e) => { if (e.target === e.currentTarget) setAddOpen(false) }}
-        >
+        <div class="palette-mask" onClick={(e) => { if (e.target === e.currentTarget) setAddOpen(false) }}>
           <div class="glass-pop add-card-pop">
             <div class="add-title">添加外部工具</div>
             <label class="add-label">名称</label>
-            <input
-              class="add-input"
-              placeholder="例如：PinTodo 待办"
-              value={addForm().name}
-              onInput={(e) => setAddForm({ ...addForm(), name: e.currentTarget.value })}
-            />
+            <input class="add-input" placeholder="例如：PinTodo 待办" value={addForm().name} onInput={(e) => setAddForm({ ...addForm(), name: e.currentTarget.value })} />
             <label class="add-label">目标（exe / lnk / 脚本路径）</label>
-            <input
-              class="add-input"
-              placeholder="D:\\app\\tool.exe"
-              value={addForm().command}
-              onInput={(e) => setAddForm({ ...addForm(), command: e.currentTarget.value })}
-            />
+            <input class="add-input" placeholder="D:\\app\\tool.exe" value={addForm().command} onInput={(e) => setAddForm({ ...addForm(), command: e.currentTarget.value })} />
             <Show when={addErr()}>
               <div class="add-err">{addErr()}</div>
             </Show>
@@ -282,10 +349,7 @@ function Dashboard() {
 
       {/* 命令面板 */}
       <Show when={paletteOpen()}>
-        <div
-          class="palette-mask"
-          onClick={(e) => { if (e.target === e.currentTarget) setPaletteOpen(false) }}
-        >
+        <div class="palette-mask" onClick={(e) => { if (e.target === e.currentTarget) setPaletteOpen(false) }}>
           <div class="glass-pop palette">
             <div class="searchbox palette-input">
               <span class="s-ico" innerHTML={ICONS.search} />
@@ -329,3 +393,6 @@ function Dashboard() {
     </div>
   )
 }
+
+// hero 主卡 id（当前固定为笔记；后续可在设置里切换）
+const heroId = () => 'notes'
